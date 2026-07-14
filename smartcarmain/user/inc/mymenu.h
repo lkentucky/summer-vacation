@@ -10,6 +10,7 @@ void Show_array(void);
 void Show_txt(void);
 void key_1(void);
 void key_2(void);
+void key_3(void);
 void enter_folder(void);
 void back_folder(void);
 void enter_editting(void);

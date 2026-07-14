@@ -1,5 +1,9 @@
 #include "menu.h"
 
+#define MAX_MENU_ITEMS_SIZE 100
+static MenuItem menu_items[MAX_MENU_ITEMS_SIZE];
+static uint8_t menu_item_index = 0;
+
 // 初始化成员
 void create_menu_item(MenuItem* father, MenuItem* me, const char name[],
                       void* data, MenuKind kind) {
@@ -39,4 +43,22 @@ void create_menu_folder(MenuItem* father, MenuItem* me, const char name[]) {
 void create_menu_txt(MenuItem* father, MenuItem* me, const char name[],
                      void* data, MenuKind kind) {
   create_menu_item(father, me, name, data, kind);
+}
+// 动态创建文件夹
+MenuItem* dynamic_create_menu_folder(MenuItem* father, const char name[]) {
+  if (menu_item_index >= MAX_MENU_ITEMS_SIZE) return NULL;
+
+  MenuItem* me = &menu_items[menu_item_index++];
+  create_menu_folder(father, me, name);
+  return me;
+}
+
+// 动态创建文件
+void dynamic_create_menu_txt(MenuItem* father, const char name[], void* data,
+                             MenuKind kind) {
+  if (menu_item_index >= MAX_MENU_ITEMS_SIZE)
+    ;
+
+  MenuItem* me = &menu_items[menu_item_index++];
+  create_menu_txt(father, me, name, data, kind);
 }

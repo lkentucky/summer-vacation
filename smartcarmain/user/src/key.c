@@ -21,8 +21,7 @@ void key_handle(void) {
   }
   if (s3 == KEY_SHORT_PRESS) {
     key_clear_state(KEY_3);
-    enter_folder();
-    enter_editting();
+    key_3();
   }
   if (s4 == KEY_SHORT_PRESS) {
     key_clear_state(KEY_4);

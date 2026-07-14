@@ -6,17 +6,6 @@
 
 MenuItem head;
 MenuItem* current_index;
-// 文件夹
-MenuItem m1;
-MenuItem m2;
-MenuItem m3;
-MenuItem m4;
-MenuItem m5;
-// 文件（参数）
-MenuItem m6;
-MenuItem m7;
-MenuItem m8;
-MenuItem m9;
 
 float Kp = 16;
 float Ki = 3.14;
@@ -33,16 +22,16 @@ void Init_menu(void) {
   head.data = NULL;
   head.kind = menu_folder;
 
-  create_menu_folder(&head, &m1, "menu1");
-  create_menu_folder(&head, &m2, "menu2");
-  create_menu_folder(&head, &m3, "menu3");
-  create_menu_txt(&m1, &m6, "kp", &Kp, float_box);
-  create_menu_txt(&m1, &m7, "ki", &Ki, float_box);
-  create_menu_txt(&m1, &m8, "kd", &Kd, float_box);
-  create_menu_txt(&m1, &m9, "state", &state, bool_box);
+  MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
+  MenuItem* folder1 = dynamic_create_menu_folder(&head, "folder1");
+  MenuItem* folder2 = dynamic_create_menu_folder(&head, "folder2");
+  MenuItem* folder3 = dynamic_create_menu_folder(folder1, "folder3");
 
-  create_menu_folder(&m1, &m4, "menu4");
-  create_menu_folder(&m2, &m5, "menu5");
+  dynamic_create_menu_txt(pid_folder, "Kp", &Kp, float_box);
+  dynamic_create_menu_txt(pid_folder, "Ki", &Ki, float_box);
+  dynamic_create_menu_txt(pid_folder, "Kd", &Kd, float_box);
+  dynamic_create_menu_txt(folder1, "state", &state, bool_box);
+
   current_index = head.first_son;
 }
 
@@ -174,5 +163,14 @@ void key_2(void) {
     }
   } else {
     array_down();
+  }
+}
+
+// key_3()和key_4()函数用于处理按键K3和K4的操作。当按下K3时，如果当前菜单项是文件夹且有子项，则进入该文件夹；如果当前菜单项不是文件夹，则切换编辑状态。当按下K4时，如果当前菜单项有父项，则返回到父菜单。
+void key_3(void) {
+  if (current_index->kind == menu_folder && current_index->first_son != NULL) {
+    enter_folder();
+  } else {
+    enter_editting();
   }
 }

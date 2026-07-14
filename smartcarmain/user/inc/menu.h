@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
+#include <stdlib.h>
 typedef struct MenuItem MenuItem;  // 提前声明，不然结构体内指针自引会报错
 
 typedef enum MenuKind MenuKind;
@@ -41,5 +41,7 @@ void create_menu_item(MenuItem* father, MenuItem* me, const char name[],
 void create_menu_folder(MenuItem* father, MenuItem* me, const char name[]);
 void create_menu_txt(MenuItem* father, MenuItem* me, const char name[],
                      void* data, MenuKind kind);
-
+MenuItem* dynamic_create_menu_folder(MenuItem* father, const char name[]);
+void dynamic_create_menu_txt(MenuItem* father, const char name[], void* data,
+                             MenuKind kind);
 #endif
