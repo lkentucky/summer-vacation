@@ -1,0 +1,27 @@
+[
+  {
+    "directory": "C:/Users/csz18/Desktop/智能车暑期集训/main/smartcarmain",
+    "command": "clang -DMM32F3273G8P -DUSE_STDPERIPH_DRIVER -Iuser/inc -Icode -I../../libraries/zf_common -I../../libraries/zf_device -I../../libraries/zf_driver -I../../libraries/sdk -I../../libraries/sdk/CMSIS/Include -I../../libraries/sdk/drivers -I../../libraries/components/fatfs/source -std=c11 -Wall -fsyntax-only -c user/src/mymenu.c",
+    "file": "user/src/mymenu.c"
+  },
+  {
+    "directory": "C:/Users/csz18/Desktop/智能车暑期集训/main/smartcarmain",
+    "command": "clang -DMM32F3273G8P -DUSE_STDPERIPH_DRIVER -Iuser/inc -Icode -I../../libraries/zf_common -I../../libraries/zf_device -I../../libraries/zf_driver -I../../libraries/sdk -I../../libraries/sdk/CMSIS/Include -I../../libraries/sdk/drivers -I../../libraries/components/fatfs/source -std=c11 -Wall -fsyntax-only -c user/src/menu.c",
+    "file": "user/src/menu.c"
+  },
+  {
+    "directory": "C:/Users/csz18/Desktop/智能车暑期集训/main/smartcarmain",
+    "command": "clang -DMM32F3273G8P -DUSE_STDPERIPH_DRIVER -Iuser/inc -Icode -I../../libraries/zf_common -I../../libraries/zf_device -I../../libraries/zf_driver -I../../libraries/sdk -I../../libraries/sdk/CMSIS/Include -I../../libraries/sdk/drivers -I../../libraries/components/fatfs/source -std=c11 -Wall -fsyntax-only -c user/src/main.c",
+    "file": "user/src/main.c"
+  },
+  {
+    "directory": "C:/Users/csz18/Desktop/智能车暑期集训/main/smartcarmain",
+    "command": "clang -DMM32F3273G8P -DUSE_STDPERIPH_DRIVER -Iuser/inc -Icode -I../../libraries/zf_common -I../../libraries/zf_device -I../../libraries/zf_driver -I../../libraries/sdk -I../../libraries/sdk/CMSIS/Include -I../../libraries/sdk/drivers -I../../libraries/components/fatfs/source -std=c11 -Wall -fsyntax-only -c user/src/isr.c",
+    "file": "user/src/isr.c"
+  },
+  {
+    "directory": "C:/Users/csz18/Desktop/智能车暑期集训/main/smartcarmain",
+    "command": "clang -DMM32F3273G8P -DUSE_STDPERIPH_DRIVER -Iuser/inc -Icode -I../../libraries/zf_common -I../../libraries/zf_device -I../../libraries/zf_driver -I../../libraries/sdk -I../../libraries/sdk/CMSIS/Include -I../../libraries/sdk/drivers -I../../libraries/components/fatfs/source -std=c11 -Wall -fsyntax-only -c user/src/key.c",
+    "file": "user/src/key.c"
+  }
+]

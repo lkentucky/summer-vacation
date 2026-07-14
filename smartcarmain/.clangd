@@ -1,0 +1,17 @@
+# clangd 配置文件
+# 主要靠项目根目录的 compile_commands.json 提供 include 路径和宏
+# 此文件只做诊断行为微调
+
+CompileFlags:
+  Remove:
+    # 移除 ARM 交叉编译专用标志（来自 compile_commands.json 时由 clangd 解析）
+    - -mcpu=*
+    - -mthumb*
+    - -mthumb-interwork
+    - -fshort-enums
+    - -fshort-wchar
+    - --specs=*
+
+Diagnostics:
+  UnusedIncludes: None
+  MissingIncludes: None
