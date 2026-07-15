@@ -45,30 +45,30 @@ int main(void) {
   clock_init(SYSTEM_CLOCK_120M);  // 必须先初始化时钟
   debug_init();                   // 初始化 Debug UART
 
-  ips200_init(IPS200_TYPE);               // 先初始化屏幕
-  ips200_show_string(0, 0, "camera init...");
+  ips200_init(IPS200_TYPE);  // 先初始化屏幕
+  ips200_show_string(0, 304, "camera init...");
 
-  while (mt9v03x_init()) {                // 初始化摄像头，失败则重试
-    ips200_show_string(0, 16, "camera retry...");
+  while (mt9v03x_init()) {  // 初始化摄像头，失败则重试
+    ips200_show_string(0, 304, "camera retry...");
     system_delay_ms(500);
   }
-  ips200_show_string(0, 16, "camera ok     ");
+  ips200_show_string(0, 304, "camera ok     ");
   mt9v03x_set_exposure_time(512);         // 设置摄像头曝光时间
   mt9v03x_set_reg(MT9V03X_LR_OFFSET, 0);  // 设置摄像头左右偏移量
   mt9v03x_set_reg(MT9V03X_UD_OFFSET, 0);  // 设置摄像头上下偏移量
   mt9v03x_set_reg(MT9V03X_GAIN, 32);      // 设置摄像头图像增益
   mt9v03x_set_reg(MT9V03X_PCLK_MODE, 0);  // 设置摄像头像素时钟模式
 
-  Init_menu();                            // 初始化菜单数据
-  key_init(10);                           // 初始化按键扫描，10ms周期
+  Init_menu();   // 初始化菜单数据
+  key_init(10);  // 初始化按键扫描，10ms周期
 
   while (1) {
     key_handle();  // 处理按键输入
     Show_menu();   // 持续刷新屏幕
     if (mt9v03x_finish_flag) {
       mt9v03x_finish_flag = 0;
-      ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H, 188,
-                             120, threshold);  // 显示摄像头图像
+      ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H,
+                             188, 120, threshold);  // 显示摄像头图像
     }
     system_delay_ms(100);
   }
