@@ -150,6 +150,10 @@ target_link_options(${ELF_NAME} PRIVATE
     -Wl,--gc-sections
 )
 
+target_link_libraries(${ELF_NAME} PRIVATE
+    ${LIB_ROOT}/zf_device/zf_device_config.a
+)
+
 set_target_properties(${ELF_NAME} PROPERTIES
     SUFFIX ".elf"
 )

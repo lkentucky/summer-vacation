@@ -11,6 +11,7 @@ float Kp = 16;
 float Ki = 3.14;
 float Kd = 1;
 bool state = true;
+int threshold = 180;
 void Init_menu(void) {
   // 初始化head
   head.name = "head";
@@ -31,6 +32,7 @@ void Init_menu(void) {
   dynamic_create_menu_txt(pid_folder, "Ki", &Ki, float_box);
   dynamic_create_menu_txt(pid_folder, "Kd", &Kd, float_box);
   dynamic_create_menu_txt(folder1, "state", &state, bool_box);
+  dynamic_create_menu_txt(&head, "threshold", &threshold, int32_box);
 
   current_index = head.first_son;
 }
@@ -54,24 +56,24 @@ void Show_txt(void) {
 
   if (current_index->kind == menu_folder) return;
   if (current_index->editing) {
-    ips200_show_string(72, current_index->seq * 16, "|");
+    ips200_show_string(112, current_index->seq * 16, "|");
   } else {
-    ips200_show_string(72, current_index->seq * 16, " ");
+    ips200_show_string(112, current_index->seq * 16, " ");
   }
 
   for (int i = 0; i < f->number_of_sons; i++) {
     switch (s->kind) {
       case int32_box:
-        ips200_show_int(80, i * 16, *(int32*)s->data, 5);
+        ips200_show_int(120, i * 16, *(int32*)s->data, 5);
         break;
       case float_box:
-        ips200_show_float(80, i * 16, *(float*)s->data, 5, 2);
+        ips200_show_float(120, i * 16, *(float*)s->data, 5, 2);
         break;
       case bool_box:
         if (*(bool*)s->data) {
-          ips200_show_string(80, i * 16, "on ");
+          ips200_show_string(120, i * 16, "on ");
         } else {
-          ips200_show_string(80, i * 16, "off");
+          ips200_show_string(120, i * 16, "off");
         }
         break;
       default:
@@ -166,11 +168,17 @@ void key_2(void) {
   }
 }
 
-// key_3()和key_4()函数用于处理按键K3和K4的操作。当按下K3时，如果当前菜单项是文件夹且有子项，则进入该文件夹；如果当前菜单项不是文件夹，则切换编辑状态。当按下K4时，如果当前菜单项有父项，则返回到父菜单。
 void key_3(void) {
   if (current_index->kind == menu_folder && current_index->first_son != NULL) {
     enter_folder();
   } else {
     enter_editting();
+  }
+}
+
+void key_3_double(void) {
+  if (current_index->father != NULL) {
+    ips200_clear();
+    current_index = &head;
   }
 }

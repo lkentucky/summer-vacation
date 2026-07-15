@@ -1,8 +1,15 @@
-./objects/main.o: ..\USER\src\main.c \
-  ..\..\libraries\zf_common\zf_common_headfile.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+./objects/main.o: ..\USER\src\main.c ..\user\inc\key.h \
+  ..\user\inc\mymenu.h ..\user\inc\menu.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
+  ..\..\libraries\zf_device\zf_device_ips200.h \
+  ..\..\libraries\zf_common\zf_common_typedef.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
+  ..\..\libraries\zf_common\zf_common_headfile.h \
   ..\..\libraries\sdk\hal_device_registers.h \
   ..\..\libraries\sdk\mm32f3277g.h \
   ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
@@ -14,7 +21,6 @@
   ..\..\libraries\sdk\mm32f3277g_features.h \
   ..\..\libraries\sdk\system_mm32f3277g.h \
   ..\..\libraries\sdk\drivers\hal_common.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
   ..\..\libraries\sdk\drivers\hal_adc.h \
   ..\..\libraries\sdk\drivers\hal_common.h \
   ..\..\libraries\sdk\drivers\hal_comp.h \
@@ -42,8 +48,6 @@
   ..\..\libraries\sdk\drivers\hal_usb_bdt.h \
   ..\..\libraries\sdk\drivers\hal_wwdg.h \
   ..\..\libraries\zf_common\zf_common_typedef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
   ..\..\libraries\zf_common\zf_common_clock.h \
   ..\..\libraries\zf_common\zf_common_debug.h \
   ..\..\libraries\zf_common\zf_common_fifo.h \
@@ -51,7 +55,6 @@
   ..\..\libraries\zf_common\zf_common_function.h \
   ..\..\libraries\zf_common\zf_common_interrupt.h \
   ..\..\libraries\zf_driver\zf_driver_adc.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
   ..\..\libraries\zf_driver\zf_driver_delay.h \
   ..\..\libraries\zf_driver\zf_driver_encoder.h \
   ..\..\libraries\zf_driver\zf_driver_exti.h \
@@ -78,7 +81,6 @@
   ..\..\libraries\zf_device\zf_device_imu660ra.h \
   ..\..\libraries\zf_device\zf_device_imu963ra.h \
   ..\..\libraries\zf_device\zf_device_ips114.h \
-  ..\..\libraries\zf_device\zf_device_ips200.h \
   ..\..\libraries\zf_device\zf_device_key.h \
   ..\..\libraries\zf_common\zf_common_debug.h \
   ..\..\libraries\zf_device\zf_device_mpu6050.h \
@@ -95,6 +97,4 @@
   ..\..\libraries\zf_device\zf_device_wireless_uart.h \
   ..\..\libraries\components\fatfs\source\ffconf.h \
   ..\..\libraries\components\fatfs\source\ff.h \
-  ..\..\libraries\components\fatfs\source\ffconf.h ..\user\inc\mymenu.h \
-  ..\user\inc\menu.h C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h \
-  ..\user\inc\key.h
+  ..\..\libraries\components\fatfs\source\ffconf.h
