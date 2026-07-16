@@ -34,10 +34,8 @@
  * 2022-08-10        Teternal            first version
  ********************************************************************************************************************/
 
-#include "key.h"
-#include "mymenu.h"
 #include "zf_common_headfile.h"
-
+#include "isr.h"
 // **************************** 代码区域 ****************************
 #define IPS200_TYPE (IPS200_TYPE_SPI)
 
@@ -61,11 +59,19 @@ int main(void) {
 
   Init_menu();   // 初始化菜单数据
   key_init(10);  // 初始化按键扫描，10ms周期
+   
+  motor_init();  // 初始化电机控制引脚和PWM输出
+  init_encoder();  // 初始化编码器
+  pit_ms_init(TIM6_PIT, 5);  // 初始化定时器中断，周期为1ms
+
 
   while (1) {
     key_handle();  // 处理按键输入
     Show_menu();   // 持续刷新屏幕
-    if (mt9v03x_finish_flag) {
+    motor_pid_speedcontrol(200.0f, 200.0f);  // 执行电机PID控制
+    get_motor_speed();      // 更新速度显示值
+    if (mt9v03x_finish_flag) 
+    {
       mt9v03x_finish_flag = 0;
       ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H,
                              188, 120, threshold);  // 显示摄像头图像

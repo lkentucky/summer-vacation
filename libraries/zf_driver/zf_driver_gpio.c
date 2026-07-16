@@ -121,7 +121,7 @@ void gpio_set_dir (gpio_pin_enum pin, gpio_dir_enum dir, gpio_mode_enum mode)
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     gpio 初始化
 // 参数说明     pin         选择的引脚 (可选择范围由 zf_driver_gpio.h 内 gpio_pin_enum 枚举值确定)
-// 参数说明     mode        引脚的方向 [GPI/GPIO]
+// 参数说明     mode        引脚的方向 [GPI/GPO]
 // 参数说明     dat         引脚初始化时设置的电平状态，输出时有效 0：低电平 1：高电平 仅在设置为输出模式时有效
 // 参数说明     mode        引脚的模式 (可选择范围由 zf_driver_gpio.h 内 gpio_mode_enum 枚举值确定)
 // 返回参数     void

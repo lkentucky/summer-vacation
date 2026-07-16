@@ -1,17 +1,11 @@
-./objects/mymenu.o: ..\user\src\mymenu.c ..\user\inc\mymenu.h \
-  ..\user\inc\menu.h C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
-  ..\..\libraries\zf_device\zf_device_ips200.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h ..\user\inc\menu.h \
-  ..\..\libraries\zf_driver\zf_driver_pit.h ..\user\inc\motor.h \
+./objects/motor.o: ..\user\src\motor.c ..\user\inc\motor.h \
   ..\..\libraries\zf_common\zf_common_headfile.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
   ..\..\libraries\sdk\drivers\hal_adc.h \
   ..\..\libraries\sdk\drivers\hal_common.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
   ..\..\libraries\sdk\hal_device_registers.h \
   ..\..\libraries\sdk\mm32f3277g.h \
   ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
@@ -49,12 +43,15 @@
   ..\..\libraries\sdk\drivers\hal_wwdg.h \
   ..\..\libraries\zf_common\zf_common_clock.h \
   ..\..\libraries\zf_common\zf_common_typedef.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
   ..\..\libraries\zf_common\zf_common_debug.h \
   ..\..\libraries\zf_common\zf_common_fifo.h \
   ..\..\libraries\zf_common\zf_common_font.h \
   ..\..\libraries\zf_common\zf_common_function.h \
   ..\..\libraries\zf_common\zf_common_interrupt.h \
   ..\..\libraries\zf_driver\zf_driver_adc.h \
+  ..\..\libraries\zf_common\zf_common_typedef.h \
   ..\..\libraries\zf_driver\zf_driver_delay.h \
   ..\..\libraries\zf_driver\zf_driver_encoder.h \
   ..\..\libraries\zf_driver\zf_driver_exti.h \
@@ -62,6 +59,7 @@
   ..\..\libraries\zf_driver\zf_driver_flash.h \
   ..\..\libraries\zf_driver\zf_driver_gpio.h \
   ..\..\libraries\zf_driver\zf_driver_iic.h \
+  ..\..\libraries\zf_driver\zf_driver_pit.h \
   ..\..\libraries\zf_driver\zf_driver_pwm.h \
   ..\..\libraries\zf_driver\zf_driver_sdio.h \
   ..\..\libraries\zf_driver\zf_driver_soft_iic.h \
@@ -80,6 +78,7 @@
   ..\..\libraries\zf_device\zf_device_imu660ra.h \
   ..\..\libraries\zf_device\zf_device_imu963ra.h \
   ..\..\libraries\zf_device\zf_device_ips114.h \
+  ..\..\libraries\zf_device\zf_device_ips200.h \
   ..\..\libraries\zf_device\zf_device_key.h \
   ..\..\libraries\zf_common\zf_common_debug.h \
   ..\..\libraries\zf_device\zf_device_mpu6050.h \
@@ -96,4 +95,6 @@
   ..\..\libraries\zf_device\zf_device_wireless_uart.h \
   ..\..\libraries\components\fatfs\source\ff.h \
   ..\..\libraries\components\fatfs\source\ffconf.h \
-  ..\..\libraries\components\fatfs\source\ffconf.h ..\user\inc\key.h
+  ..\..\libraries\components\fatfs\source\ffconf.h ..\user\inc\key.h \
+  ..\user\inc\mymenu.h ..\user\inc\menu.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h

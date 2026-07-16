@@ -1,8 +1,11 @@
 ./objects/isr.o: ..\user\src\isr.c ..\user\inc\isr.h \
   ..\..\libraries\zf_common\zf_common_headfile.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
+  ..\..\libraries\sdk\drivers\hal_adc.h \
+  ..\..\libraries\sdk\drivers\hal_common.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
   ..\..\libraries\sdk\hal_device_registers.h \
   ..\..\libraries\sdk\mm32f3277g.h \
   ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
@@ -13,9 +16,6 @@
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_acle.h \
   ..\..\libraries\sdk\mm32f3277g_features.h \
   ..\..\libraries\sdk\system_mm32f3277g.h \
-  ..\..\libraries\sdk\drivers\hal_common.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  ..\..\libraries\sdk\drivers\hal_adc.h \
   ..\..\libraries\sdk\drivers\hal_common.h \
   ..\..\libraries\sdk\drivers\hal_comp.h \
   ..\..\libraries\sdk\drivers\hal_dac.h \
@@ -41,10 +41,10 @@
   ..\..\libraries\sdk\drivers\hal_usb_bdt.h \
   ..\..\libraries\sdk\drivers\hal_usb_bdt.h \
   ..\..\libraries\sdk\drivers\hal_wwdg.h \
+  ..\..\libraries\zf_common\zf_common_clock.h \
   ..\..\libraries\zf_common\zf_common_typedef.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
-  ..\..\libraries\zf_common\zf_common_clock.h \
   ..\..\libraries\zf_common\zf_common_debug.h \
   ..\..\libraries\zf_common\zf_common_fifo.h \
   ..\..\libraries\zf_common\zf_common_font.h \
@@ -93,6 +93,8 @@
   ..\..\libraries\zf_device\zf_device_virtual_oscilloscope.h \
   ..\..\libraries\zf_device\zf_device_wifi_uart.h \
   ..\..\libraries\zf_device\zf_device_wireless_uart.h \
-  ..\..\libraries\components\fatfs\source\ffconf.h \
   ..\..\libraries\components\fatfs\source\ff.h \
-  ..\..\libraries\components\fatfs\source\ffconf.h
+  ..\..\libraries\components\fatfs\source\ffconf.h \
+  ..\..\libraries\components\fatfs\source\ffconf.h ..\user\inc\key.h \
+  ..\user\inc\motor.h ..\user\inc\mymenu.h ..\user\inc\menu.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h

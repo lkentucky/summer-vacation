@@ -3,6 +3,7 @@
 #include "menu.h"
 #include "zf_device_ips200.h"
 #include "zf_driver_pit.h"
+#include "motor.h"
 
 MenuItem head;
 MenuItem* current_index;
@@ -12,6 +13,8 @@ float Ki = 3.14;
 float Kd = 1;
 bool state = true;
 int threshold = 180;
+int pwm = 1000;
+
 void Init_menu(void) {
   // 初始化head
   head.name = "head";
@@ -24,14 +27,18 @@ void Init_menu(void) {
   head.kind = menu_folder;
 
   MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
-  MenuItem* folder1 = dynamic_create_menu_folder(&head, "folder1");
+  MenuItem* motor_folder = dynamic_create_menu_folder(&head, "motor");
   MenuItem* folder2 = dynamic_create_menu_folder(&head, "folder2");
-  MenuItem* folder3 = dynamic_create_menu_folder(folder1, "folder3");
+  
+
 
   dynamic_create_menu_txt(pid_folder, "Kp", &Kp, float_box);
   dynamic_create_menu_txt(pid_folder, "Ki", &Ki, float_box);
   dynamic_create_menu_txt(pid_folder, "Kd", &Kd, float_box);
-  dynamic_create_menu_txt(folder1, "state", &state, bool_box);
+  dynamic_create_menu_txt(pid_folder, "state", &state, bool_box);
+  dynamic_create_menu_txt(motor_folder, "PWM", &pwm, int32_box);
+  dynamic_create_menu_txt(motor_folder, "speedl", &real_speedl, float_box);
+  dynamic_create_menu_txt(motor_folder, "speedr", &real_speedr, float_box);
   dynamic_create_menu_txt(&head, "threshold", &threshold, int32_box);
 
   current_index = head.first_son;
@@ -182,3 +189,4 @@ void key_3_double(void) {
     current_index = &head;
   }
 }
+

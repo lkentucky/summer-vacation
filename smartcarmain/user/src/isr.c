@@ -42,7 +42,7 @@
 void TIM1_UP_IRQHandler (void)
 {
     // 此处编写用户代码
-
+    
     // 此处编写用户代码
     TIM1->SR &= ~TIM1->SR;                                                      // 清空中断状态
 }
@@ -102,7 +102,13 @@ void TIM5_IRQHandler (void)
 void TIM6_IRQHandler (void)
 {
     // 此处编写用户代码
-
+    //计算编码器计数差
+    encoder_diffl = encoder_get_count(TIM3_ENCODER);
+    encoder_clear_count(TIM3_ENCODER);   // 读完清零
+    motor_speedl = encoder_diffl/(5.0*0.001);  // 计算电机速度，单位为脉冲数每秒
+    encoder_diffr = encoder_get_count(TIM4_ENCODER);
+    encoder_clear_count(TIM4_ENCODER);   // 读完清零
+    motor_speedr = encoder_diffr/(5.0*0.001);  // 计算电机速度，单位为脉冲数每秒
     // 此处编写用户代码
     TIM6->SR &= ~TIM6->SR;                                                      // 清空中断状态
 }

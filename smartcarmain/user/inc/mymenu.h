@@ -5,6 +5,7 @@
 #include "zf_device_ips200.h"
 
 extern int threshold;  // 二值化阈值
+extern int pwm;        // 电机PWM值
 void Init_menu(void);
 void Show_menu(void);
 void Show_array(void);
