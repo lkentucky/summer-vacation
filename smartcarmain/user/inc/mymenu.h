@@ -4,7 +4,7 @@
 #include "menu.h"
 #include "zf_device_ips200.h"
 
-extern int threshold;  // 二值化阈值
+extern uint8 threshold;  // 二值化阈值
 extern int pwm;        // 电机PWM值
 void Init_menu(void);
 void Show_menu(void);
@@ -17,4 +17,5 @@ void key_3_double(void);
 void enter_folder(void);
 void back_folder(void);
 void enter_editting(void);
+void key_4_double(void);
 #endif

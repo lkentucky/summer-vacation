@@ -36,6 +36,8 @@
 
 #include "zf_common_headfile.h"
 #include "isr.h"
+#include "image.h"
+#include <string.h>
 // **************************** 代码区域 ****************************
 #define IPS200_TYPE (IPS200_TYPE_SPI)
 
@@ -62,21 +64,32 @@ int main(void) {
    
   motor_init();  // 初始化电机控制引脚和PWM输出
   init_encoder();  // 初始化编码器
-  pit_ms_init(TIM6_PIT, 5);  // 初始化定时器中断，周期为1ms
-
+  pit_ms_init(TIM6_PIT, 5);  // 初始化定时器中断，周期为5ms
+  
 
   while (1) {
     key_handle();  // 处理按键输入
     Show_menu();   // 持续刷新屏幕
-    motor_pid_speedcontrol(200.0f, 200.0f);  // 执行电机PID控制
-    get_motor_speed();      // 更新速度显示值
-    if (mt9v03x_finish_flag) 
+    if (mt9v03x_finish_flag)
     {
+      static uint8 frame_skip = 0;
       mt9v03x_finish_flag = 0;
-      ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H,
-                             188, 120, threshold);  // 显示摄像头图像
+      memcpy(base_image, mt9v03x_image, sizeof(base_image));
+      uint8 thresholdb = otsu_threshold(base_image);  // 使用大津法计算阈值
+      set_image_twovalues(thresholdb);  // 根据阈值进行二值化处理
+      find_base_point();      // 找出图像基点
+      find_boundary();        // 找出赛道边界
+      if (++frame_skip >= 3)
+      {
+        frame_skip = 0;
+        ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H,
+                               188, 120, threshold);  // 显示摄像头图像
+      }
+      draw_boundary();  // 在屏幕上绘制赛道边界
     }
-    system_delay_ms(100);
+    printf(" %.2f,%d,%.2f,%d\n", real_speedl, (int)target_speedl, real_speedr, (int)target_speedr);  // 打印速度值
+    system_delay_ms(10);
+
   }
 }
 // **************************** 代码区域 ****************************

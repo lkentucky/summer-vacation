@@ -34,6 +34,7 @@
 ********************************************************************************************************************/
 
 #include "isr.h"
+#include "motor.h"
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     TIM1 的定时器更新中断服务函数 启动 .s 文件定义 不允许修改函数名称
@@ -101,16 +102,18 @@ void TIM5_IRQHandler (void)
 //-------------------------------------------------------------------------------------------------------------------
 void TIM6_IRQHandler (void)
 {
-    // 此处编写用户代码
-    //计算编码器计数差
-    encoder_diffl = encoder_get_count(TIM3_ENCODER);
-    encoder_clear_count(TIM3_ENCODER);   // 读完清零
-    motor_speedl = encoder_diffl/(5.0*0.001);  // 计算电机速度，单位为脉冲数每秒
-    encoder_diffr = encoder_get_count(TIM4_ENCODER);
-    encoder_clear_count(TIM4_ENCODER);   // 读完清零
-    motor_speedr = encoder_diffr/(5.0*0.001);  // 计算电机速度，单位为脉冲数每秒
-    // 此处编写用户代码
-    TIM6->SR &= ~TIM6->SR;                                                      // 清空中断状态
+    encoder_diffl = encoder_get_count(TIM3_ENCODER);  // 获取左轮编码器计数值
+    encoder_clear_count(TIM3_ENCODER);                // 清空左轮编码器计数值
+    motor_speedl = encoder_diffl / (5.0f * 0.001f);   // 计算左轮速度，单位为脉冲数/秒
+
+    encoder_diffr = encoder_get_count(TIM4_ENCODER);  // 获取右轮编码器计数值
+    encoder_clear_count(TIM4_ENCODER);                // 清空右轮编码器计数值
+    motor_speedr = encoder_diffr / (5.0f * 0.001f);   // 计算右轮速度，单位为脉冲数/秒
+
+    get_motor_speed();                                 // 获取电机实际速度
+    motor_pid_speedcontrol();            // 调用 PID 控制函数，设置目标速度为 200.0f cm/s
+
+    TIM6->SR &= ~TIM6->SR;
 }
 
 //-------------------------------------------------------------------------------------------------------------------

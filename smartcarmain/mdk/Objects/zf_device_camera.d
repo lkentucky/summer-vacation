@@ -1,33 +1,29 @@
-./objects/zf_device_camera.o: \
-  ..\..\libraries\zf_device\zf_device_camera.c \
-  ..\..\libraries\zf_common\zf_common_debug.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
-  ..\..\libraries\zf_common\zf_common_interrupt.h \
-  ..\..\libraries\sdk\hal_device_registers.h \
-  ..\..\libraries\sdk\mm32f3277g.h \
-  ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_armclang.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_compat.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_acle.h \
-  ..\..\libraries\sdk\mm32f3277g_features.h \
-  ..\..\libraries\sdk\system_mm32f3277g.h \
-  ..\..\libraries\zf_driver\zf_driver_exti.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  ..\..\libraries\zf_driver\zf_driver_gpio.h \
-  ..\..\libraries\zf_driver\zf_driver_dma.h \
-  ..\..\libraries\zf_driver\zf_driver_timer.h \
-  ..\..\libraries\zf_device\zf_device_type.h \
-  ..\..\libraries\zf_device\zf_device_mt9v03x.h \
-  ..\..\libraries\zf_device\zf_device_ov7725.h \
-  ..\..\libraries\zf_device\zf_device_scc8660.h \
-  ..\..\libraries\zf_device\zf_device_camera.h \
-  ..\..\libraries\zf_common\zf_common_fifo.h \
-  ..\..\libraries\zf_driver\zf_driver_uart.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_device\zf_device_camera.c
+.\objects\zf_device_camera.o: ..\..\libraries\zf_common\zf_common_debug.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_common\zf_common_typedef.h
+.\objects\zf_device_camera.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\zf_device_camera.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\zf_device_camera.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\zf_device_camera.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\zf_device_camera.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\zf_device_camera.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_common\zf_common_interrupt.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\hal_device_registers.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\mm32f3277g.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\CMSIS\Include\core_cm3.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_armcc.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\mm32f3277g_features.h
+.\objects\zf_device_camera.o: ..\..\libraries\sdk\system_mm32f3277g.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_driver\zf_driver_exti.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_driver\zf_driver_gpio.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_driver\zf_driver_dma.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_driver\zf_driver_timer.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_device\zf_device_type.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_device\zf_device_mt9v03x.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_device\zf_device_ov7725.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_device\zf_device_scc8660.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_device\zf_device_camera.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_common\zf_common_fifo.h
+.\objects\zf_device_camera.o: ..\..\libraries\zf_driver\zf_driver_uart.h

@@ -14,13 +14,17 @@ extern int encoder_diffl;  // 左轮编码器差值
 extern int encoder_diffr;  // 右轮编码器差值
 extern float real_speedl;  // 左轮实际速度
 extern float real_speedr;  // 右轮实际速度
-
+extern float Kp;  // PID控制器的比例增益
+extern float Ki;  // PID控制器的积分增益
+extern float Kd;  // PID控制器的微分增益
+extern float target_speedl;  // 左轮目标速度
+extern float target_speedr;  // 右轮目标速度
 
 void motor_init(void);
 void motorl_set_pwm(int lpwm);
 void motorr_set_pwm(int rpwm);
 void init_encoder(void);
 void get_motor_speed(void);
-void motor_pid_speedcontrol(float target_speedl, float target_speedr);
+void motor_pid_speedcontrol(void);
 
 #endif  // __MOTOR_H_

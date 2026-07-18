@@ -1,28 +1,23 @@
-./objects/zf_device_imu660ra.o: \
-  ..\..\libraries\zf_device\zf_device_imu660ra.c \
-  ..\..\libraries\zf_common\zf_common_debug.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
-  ..\..\libraries\zf_driver\zf_driver_delay.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  ..\..\libraries\zf_driver\zf_driver_spi.h \
-  ..\..\libraries\zf_driver\zf_driver_gpio.h \
-  ..\..\libraries\sdk\hal_device_registers.h \
-  ..\..\libraries\sdk\mm32f3277g.h \
-  ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_armclang.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_compat.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_acle.h \
-  ..\..\libraries\sdk\mm32f3277g_features.h \
-  ..\..\libraries\sdk\system_mm32f3277g.h \
-  ..\..\libraries\zf_driver\zf_driver_soft_iic.h \
-  ..\..\libraries\zf_driver\zf_driver_gpio.h \
-  ..\..\libraries\zf_device\zf_device_config.h \
-  ..\..\libraries\zf_device\zf_device_imu660ra.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_device\zf_device_imu660ra.c
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_common\zf_common_debug.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_common\zf_common_typedef.h
+.\objects\zf_device_imu660ra.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\zf_device_imu660ra.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\zf_device_imu660ra.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\zf_device_imu660ra.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\zf_device_imu660ra.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\zf_device_imu660ra.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_driver\zf_driver_delay.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_driver\zf_driver_spi.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_driver\zf_driver_gpio.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\hal_device_registers.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\mm32f3277g.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\CMSIS\Include\core_cm3.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_armcc.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\mm32f3277g_features.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\sdk\system_mm32f3277g.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_driver\zf_driver_soft_iic.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_device\zf_device_config.h
+.\objects\zf_device_imu660ra.o: ..\..\libraries\zf_device\zf_device_imu660ra.h

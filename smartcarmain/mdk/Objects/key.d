@@ -1,24 +1,24 @@
-./objects/key.o: ..\user\src\key.c ..\user\inc\key.h ..\user\inc\mymenu.h \
-  ..\user\inc\menu.h C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
-  ..\..\libraries\zf_device\zf_device_ips200.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
-  ..\..\libraries\zf_device\zf_device_key.h \
-  ..\..\libraries\zf_common\zf_common_debug.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  ..\..\libraries\zf_driver\zf_driver_gpio.h \
-  ..\..\libraries\sdk\hal_device_registers.h \
-  ..\..\libraries\sdk\mm32f3277g.h \
-  ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_armclang.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_compat.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_acle.h \
-  ..\..\libraries\sdk\mm32f3277g_features.h \
-  ..\..\libraries\sdk\system_mm32f3277g.h
+.\objects\key.o: ..\user\src\key.c
+.\objects\key.o: ..\user\inc\key.h
+.\objects\key.o: ..\user\inc\mymenu.h
+.\objects\key.o: ..\user\inc\menu.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\key.o: ..\..\libraries\zf_device\zf_device_ips200.h
+.\objects\key.o: ..\..\libraries\zf_common\zf_common_typedef.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\key.o: ..\..\libraries\zf_device\zf_device_key.h
+.\objects\key.o: ..\..\libraries\zf_common\zf_common_debug.h
+.\objects\key.o: ..\..\libraries\zf_driver\zf_driver_gpio.h
+.\objects\key.o: ..\..\libraries\sdk\hal_device_registers.h
+.\objects\key.o: ..\..\libraries\sdk\mm32f3277g.h
+.\objects\key.o: ..\..\libraries\sdk\CMSIS\Include\core_cm3.h
+.\objects\key.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h
+.\objects\key.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h
+.\objects\key.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_armcc.h
+.\objects\key.o: ..\..\libraries\sdk\mm32f3277g_features.h
+.\objects\key.o: ..\..\libraries\sdk\system_mm32f3277g.h

@@ -8,11 +8,9 @@
 MenuItem head;
 MenuItem* current_index;
 
-float Kp = 16;
-float Ki = 3.14;
-float Kd = 1;
+
 bool state = true;
-int threshold = 180;
+uint8 threshold = 230;
 int pwm = 1000;
 
 void Init_menu(void) {
@@ -36,10 +34,12 @@ void Init_menu(void) {
   dynamic_create_menu_txt(pid_folder, "Ki", &Ki, float_box);
   dynamic_create_menu_txt(pid_folder, "Kd", &Kd, float_box);
   dynamic_create_menu_txt(pid_folder, "state", &state, bool_box);
-  dynamic_create_menu_txt(motor_folder, "PWM", &pwm, int32_box);
-  dynamic_create_menu_txt(motor_folder, "speedl", &real_speedl, float_box);
-  dynamic_create_menu_txt(motor_folder, "speedr", &real_speedr, float_box);
-  dynamic_create_menu_txt(&head, "threshold", &threshold, int32_box);
+  //dynamic_create_menu_txt(motor_folder, "PWM", &pwm, int32_box);
+  dynamic_create_menu_txt(motor_folder, "target_speedl", &target_speedl, float_box);
+  dynamic_create_menu_txt(motor_folder, "target_speedr", &target_speedr, float_box);
+  dynamic_create_menu_txt(motor_folder, "real_speedl", &real_speedl, float_box);
+  dynamic_create_menu_txt(motor_folder, "real_speedr", &real_speedr, float_box);
+  dynamic_create_menu_txt(&head, "threshold", &threshold, uint8_box);
 
   current_index = head.first_son;
 }
@@ -82,6 +82,8 @@ void Show_txt(void) {
         } else {
           ips200_show_string(120, i * 16, "off");
         }
+      case uint8_box:
+        ips200_show_int(120, i * 16, *(uint8*)s->data, 3);  
         break;
       default:
         break;
@@ -148,9 +150,11 @@ void key_1(void) {
         break;
       case bool_box:
         (*(bool*)current_index->data) = !(*(bool*)current_index->data);
+      case uint8_box:
+        (*(uint8*)current_index->data)++;
       default:
         break;
-    }
+}
   } else {
     array_up();
   }
@@ -167,6 +171,8 @@ void key_2(void) {
         break;
       case bool_box:
         (*(bool*)current_index->data) = !(*(bool*)current_index->data);
+      case uint8_box:
+        (*(uint8*)current_index->data)--;
       default:
         break;
     }
@@ -187,6 +193,16 @@ void key_3_double(void) {
   if (current_index->father != NULL) {
     ips200_clear();
     current_index = &head;
+  }
+}
+
+void key_4_double(void) {
+  if (target_speedl == 0.0f) {
+    target_speedl = 200.0f;
+    //target_speedr = 200.0f;
+  } else {
+    target_speedl = 0.0f;
+    //target_speedr = 0.0f;
   }
 }
 

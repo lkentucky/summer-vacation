@@ -1,100 +1,97 @@
-./objects/main.o: ..\USER\src\main.c \
-  ..\..\libraries\zf_common\zf_common_headfile.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
-  ..\..\libraries\sdk\drivers\hal_adc.h \
-  ..\..\libraries\sdk\drivers\hal_common.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  ..\..\libraries\sdk\hal_device_registers.h \
-  ..\..\libraries\sdk\mm32f3277g.h \
-  ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_armclang.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_compat.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_acle.h \
-  ..\..\libraries\sdk\mm32f3277g_features.h \
-  ..\..\libraries\sdk\system_mm32f3277g.h \
-  ..\..\libraries\sdk\drivers\hal_common.h \
-  ..\..\libraries\sdk\drivers\hal_comp.h \
-  ..\..\libraries\sdk\drivers\hal_dac.h \
-  ..\..\libraries\sdk\drivers\hal_dma.h \
-  ..\..\libraries\sdk\drivers\hal_dma_request.h \
-  ..\..\libraries\sdk\drivers\hal_exti.h \
-  ..\..\libraries\sdk\drivers\hal_fsmc.h \
-  ..\..\libraries\sdk\drivers\hal_gpio.h \
-  ..\..\libraries\sdk\drivers\hal_i2c.h \
-  ..\..\libraries\sdk\drivers\hal_iwdg.h \
-  ..\..\libraries\sdk\drivers\hal_rcc.h \
-  ..\..\libraries\sdk\drivers\hal_rtc.h \
-  ..\..\libraries\sdk\drivers\hal_rcc.h \
-  ..\..\libraries\sdk\drivers\hal_sdio.h \
-  ..\..\libraries\sdk\drivers\hal_spi.h \
-  ..\..\libraries\sdk\drivers\hal_syscfg.h \
-  ..\..\libraries\sdk\drivers\hal_tim_16b.h \
-  ..\..\libraries\sdk\drivers\hal_tim_32b.h \
-  ..\..\libraries\sdk\drivers\hal_tim_adv.h \
-  ..\..\libraries\sdk\drivers\hal_tim_basic.h \
-  ..\..\libraries\sdk\drivers\hal_uart.h \
-  ..\..\libraries\sdk\drivers\hal_usb.h \
-  ..\..\libraries\sdk\drivers\hal_usb_bdt.h \
-  ..\..\libraries\sdk\drivers\hal_usb_bdt.h \
-  ..\..\libraries\sdk\drivers\hal_wwdg.h \
-  ..\..\libraries\zf_common\zf_common_clock.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
-  ..\..\libraries\zf_common\zf_common_debug.h \
-  ..\..\libraries\zf_common\zf_common_fifo.h \
-  ..\..\libraries\zf_common\zf_common_font.h \
-  ..\..\libraries\zf_common\zf_common_function.h \
-  ..\..\libraries\zf_common\zf_common_interrupt.h \
-  ..\..\libraries\zf_driver\zf_driver_adc.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  ..\..\libraries\zf_driver\zf_driver_delay.h \
-  ..\..\libraries\zf_driver\zf_driver_encoder.h \
-  ..\..\libraries\zf_driver\zf_driver_exti.h \
-  ..\..\libraries\zf_driver\zf_driver_gpio.h \
-  ..\..\libraries\zf_driver\zf_driver_flash.h \
-  ..\..\libraries\zf_driver\zf_driver_gpio.h \
-  ..\..\libraries\zf_driver\zf_driver_iic.h \
-  ..\..\libraries\zf_driver\zf_driver_pit.h \
-  ..\..\libraries\zf_driver\zf_driver_pwm.h \
-  ..\..\libraries\zf_driver\zf_driver_sdio.h \
-  ..\..\libraries\zf_driver\zf_driver_soft_iic.h \
-  ..\..\libraries\zf_driver\zf_driver_soft_spi.h \
-  ..\..\libraries\zf_driver\zf_driver_spi.h \
-  ..\..\libraries\zf_driver\zf_driver_timer.h \
-  ..\..\libraries\zf_driver\zf_driver_uart.h \
-  ..\..\libraries\zf_device\zf_device_absolute_encoder.h \
-  ..\..\libraries\zf_device\zf_device_bluetooth_ch9141.h \
-  ..\..\libraries\zf_device\zf_device_camera.h \
-  ..\..\libraries\zf_common\zf_common_fifo.h \
-  ..\..\libraries\zf_device\zf_device_dl1a.h \
-  ..\..\libraries\zf_device\zf_device_dm1xa.h \
-  ..\..\libraries\zf_device\zf_device_gps_tau1201.h \
-  ..\..\libraries\zf_device\zf_device_icm20602.h \
-  ..\..\libraries\zf_device\zf_device_imu660ra.h \
-  ..\..\libraries\zf_device\zf_device_imu963ra.h \
-  ..\..\libraries\zf_device\zf_device_ips114.h \
-  ..\..\libraries\zf_device\zf_device_ips200.h \
-  ..\..\libraries\zf_device\zf_device_key.h \
-  ..\..\libraries\zf_common\zf_common_debug.h \
-  ..\..\libraries\zf_device\zf_device_mpu6050.h \
-  ..\..\libraries\zf_device\zf_device_mt9v03x.h \
-  ..\..\libraries\zf_device\zf_device_oled.h \
-  ..\..\libraries\zf_device\zf_device_ov7725.h \
-  ..\..\libraries\zf_device\zf_device_scc8660.h \
-  ..\..\libraries\zf_device\zf_device_sdcard.h \
-  ..\..\libraries\zf_device\zf_device_tft180.h \
-  ..\..\libraries\zf_device\zf_device_tsl1401.h \
-  ..\..\libraries\zf_device\zf_device_type.h \
-  ..\..\libraries\zf_device\zf_device_virtual_oscilloscope.h \
-  ..\..\libraries\zf_device\zf_device_wifi_uart.h \
-  ..\..\libraries\zf_device\zf_device_wireless_uart.h \
-  ..\..\libraries\components\fatfs\source\ff.h \
-  ..\..\libraries\components\fatfs\source\ffconf.h \
-  ..\..\libraries\components\fatfs\source\ffconf.h ..\user\inc\key.h \
-  ..\user\inc\motor.h ..\user\inc\mymenu.h ..\user\inc\menu.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h ..\user\inc\isr.h
+.\objects\main.o: ..\USER\src\main.c
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_headfile.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_adc.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_common.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\main.o: ..\..\libraries\sdk\hal_device_registers.h
+.\objects\main.o: ..\..\libraries\sdk\mm32f3277g.h
+.\objects\main.o: ..\..\libraries\sdk\CMSIS\Include\core_cm3.h
+.\objects\main.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h
+.\objects\main.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h
+.\objects\main.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_armcc.h
+.\objects\main.o: ..\..\libraries\sdk\mm32f3277g_features.h
+.\objects\main.o: ..\..\libraries\sdk\system_mm32f3277g.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_comp.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_dac.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_dma.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_dma_request.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_exti.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_fsmc.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_gpio.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_i2c.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_iwdg.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_rcc.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_rtc.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_sdio.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_spi.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_syscfg.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_tim_16b.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_tim_32b.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_tim_adv.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_tim_basic.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_uart.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_usb.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_usb_bdt.h
+.\objects\main.o: ..\..\libraries\sdk\drivers\hal_wwdg.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_clock.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_typedef.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_debug.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_fifo.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_font.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_function.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_interrupt.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_adc.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_delay.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_encoder.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_exti.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_gpio.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_flash.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_iic.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_pit.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_pwm.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_sdio.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_soft_iic.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_soft_spi.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_spi.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_timer.h
+.\objects\main.o: ..\..\libraries\zf_driver\zf_driver_uart.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_absolute_encoder.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_bluetooth_ch9141.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_camera.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_dl1a.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_dm1xa.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_gps_tau1201.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_icm20602.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_imu660ra.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_imu963ra.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_ips114.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_ips200.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_key.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_mpu6050.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_mt9v03x.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_oled.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_ov7725.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_scc8660.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_sdcard.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_tft180.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_tsl1401.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_type.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_virtual_oscilloscope.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_wifi_uart.h
+.\objects\main.o: ..\..\libraries\zf_device\zf_device_wireless_uart.h
+.\objects\main.o: ..\..\libraries\components\fatfs\source\ff.h
+.\objects\main.o: ..\..\libraries\components\fatfs\source\ffconf.h
+.\objects\main.o: ..\user\inc\key.h
+.\objects\main.o: ..\user\inc\motor.h
+.\objects\main.o: ..\..\libraries\zf_common\zf_common_headfile.h
+.\objects\main.o: ..\user\inc\mymenu.h
+.\objects\main.o: ..\user\inc\menu.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\main.o: ..\user\inc\image.h
+.\objects\main.o: ..\user\inc\calculation.h
+.\objects\main.o: ..\user\inc\isr.h

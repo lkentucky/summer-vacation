@@ -2,9 +2,9 @@
 
 #define D 6.5   //轮子直径
 #define PPR 1024 //编码器每转脉冲数
-#define Kp 1.0f
-#define Ki 0.1f
-#define Kd 0.01f
+float Kp = 9.36f;
+float Ki = 0.5f;
+float Kd = 0.01f;
 
 int motor_speedl = 0;
 int motor_speedr = 0;   
@@ -12,6 +12,8 @@ int encoder_diffl = 0;
 int encoder_diffr = 0;
 float real_speedl = 0.0f;
 float real_speedr = 0.0f;
+float target_speedl = 0.0f;  // 左轮目标速度
+float target_speedr = 0.0f;  // 右轮目标速度
 
 void motor_init(void) 
 {
@@ -79,30 +81,35 @@ void get_motor_speed(void)
 
 
 //pid闭环控制电机转速
-void motor_pid_speedcontrol(float vl, float vr)
+void motor_pid_speedcontrol(void)
 {
-    static float errk_1 = 0, errk_2 = 0;       // e(k-1), e(k-2)
-    static float control_effortl = 0, control_effortr = 0;                 // u(k-1)
+    static float errl_k1 = 0, errl_k2 = 0;
+    static float errr_k1 = 0, errr_k2 = 0;
+    static float control_effortl = 0, control_effortr = 0;
 
-    float errl = vl - (float)real_speedl;  // 计算左轮速度误差
-    float errr = vr - (float)real_speedr;  // 计算右轮速度误差 
+    float errl = target_speedl - real_speedl;
+    float errr = target_speedr - real_speedr;
 
-    float deltal = Kp * (errl - errk_1)
+    float deltal = Kp * (errl - errl_k1)
                 + Ki * errl
-                + Kd * (errl - 2*errk_1 + errk_2);
+                + Kd * (errl - 2*errl_k1 + errl_k2);
 
-    float deltar = Kp * (errr - errk_1)
+    float deltar = Kp * (errr - errr_k1)
                 + Ki * errr
-                + Kd * (errr - 2*errk_1 + errk_2);  
+                + Kd * (errr - 2*errr_k1 + errr_k2);
 
-    errk_2 = errk_1;
-    errk_1 = errl;
-    control_effortl = control_effortl + deltal;               // u(k) = u(k-1) + Δu
+    errl_k2 = errl_k1;
+    errl_k1 = errl;
+    control_effortl += deltal;
+    if (control_effortl >  5000) control_effortl =  5000;   // 积分限幅
+    if (control_effortl < -5000) control_effortl = -5000;
 
-    errk_2 = errk_1;
-    errk_1 = errr;
-    control_effortr = control_effortr + deltar;               // u(k) = u(k-1) + Δu
+    errr_k2 = errr_k1;
+    errr_k1 = errr;
+    control_effortr += deltar;
+    if (control_effortr >  5000) control_effortr =  5000;
+    if (control_effortr < -5000) control_effortr = -5000;
 
-    motorl_set_pwm(real_speedl+(int)control_effortl);  // 设置左轮PWM
-    motorr_set_pwm(real_speedr+(int)control_effortr);  // 设置右轮PWM
+    motorl_set_pwm((int)control_effortl);
+    motorr_set_pwm((int)control_effortr);
 }

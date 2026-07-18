@@ -1,12 +1,12 @@
-./objects/diskio.o: ..\..\libraries\components\fatfs\source\diskio.c \
-  ..\..\libraries\components\fatfs\source\ff.h \
-  ..\..\libraries\components\fatfs\source\ffconf.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
-  ..\..\libraries\components\fatfs\source\diskio.h \
-  ..\..\libraries\zf_device\zf_device_sdcard.h \
-  ..\..\libraries\zf_common\zf_common_typedef.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdarg.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h
+.\objects\diskio.o: ..\..\libraries\components\fatfs\source\diskio.c
+.\objects\diskio.o: ..\..\libraries\components\fatfs\source\ff.h
+.\objects\diskio.o: ..\..\libraries\components\fatfs\source\ffconf.h
+.\objects\diskio.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\diskio.o: ..\..\libraries\components\fatfs\source\diskio.h
+.\objects\diskio.o: ..\..\libraries\zf_device\zf_device_sdcard.h
+.\objects\diskio.o: ..\..\libraries\zf_common\zf_common_typedef.h
+.\objects\diskio.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\diskio.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\diskio.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\diskio.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\diskio.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h

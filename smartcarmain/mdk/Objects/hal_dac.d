@@ -1,16 +1,14 @@
-./objects/hal_dac.o: ..\..\libraries\sdk\drivers\hal_dac.c \
-  ..\..\libraries\sdk\drivers\hal_dac.h \
-  ..\..\libraries\sdk\drivers\hal_common.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h \
-  ..\..\libraries\sdk\hal_device_registers.h \
-  ..\..\libraries\sdk\mm32f3277g.h \
-  ..\..\libraries\sdk\CMSIS\Include\core_cm3.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h \
-  ..\..\libraries\sdk\CMSIS\Include\cmsis_armclang.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_compat.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\arm_acle.h \
-  ..\..\libraries\sdk\mm32f3277g_features.h \
-  ..\..\libraries\sdk\system_mm32f3277g.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\drivers\hal_dac.c
+.\objects\hal_dac.o: ..\..\libraries\sdk\drivers\hal_dac.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\drivers\hal_common.h
+.\objects\hal_dac.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\hal_dac.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\hal_dac.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\hal_device_registers.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\mm32f3277g.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\CMSIS\Include\core_cm3.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_version.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\CMSIS\Include\cmsis_armcc.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\mm32f3277g_features.h
+.\objects\hal_dac.o: ..\..\libraries\sdk\system_mm32f3277g.h

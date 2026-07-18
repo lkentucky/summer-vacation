@@ -4,13 +4,15 @@
 #include "zf_device_key.h"
 #include "zf_driver_gpio.h"
 
-#define DOUBLE_CLICK_TICKS 3
-#define INITIAL_DELAY 5
-#define REPEAT_DELAY 2
+#define DOUBLE_CLICK_TICKS 30
+#define INITIAL_DELAY 50
+#define REPEAT_DELAY 10
 
 static uint32_t tick = 0;
 static uint32_t key3_press_tick = 0;
+static uint32_t key4_press_tick = 0;
 static bool key3_pending = false;
+static bool key4_pending = false;
 static uint8_t key1_repeat = 0;
 static uint8_t key2_repeat = 0;
 static bool key1_held = false;
@@ -23,6 +25,10 @@ void key_handle(void) {
   if (key3_pending && (tick - key3_press_tick > DOUBLE_CLICK_TICKS)) {
     key_3();
     key3_pending = false;
+  }
+  if (key4_pending && (tick - key4_press_tick > DOUBLE_CLICK_TICKS)) {
+    back_folder();
+    key4_pending = false;
   }
 
   key_state_enum s1 = key_get_state(KEY_1);
@@ -48,7 +54,13 @@ void key_handle(void) {
   }
   if (s4 == KEY_SHORT_PRESS) {
     key_clear_state(KEY_4);
-    back_folder();
+    if (key4_pending) {
+      key_4_double();
+      key4_pending = false;
+    } else {
+      key4_pending = true;
+      key4_press_tick = tick;
+    }
   }
 
   if (gpio_get_level(E2) == GPIO_LOW) {
