@@ -100,8 +100,12 @@ void TIM5_IRQHandler (void)
 // 函数简介     TIM6 的定时器中断服务函数 启动 .s 文件定义 不允许修改函数名称
 //              默认优先级 修改优先级使用 interrupt_set_priority(TIM6_IRQn, 1);
 //-------------------------------------------------------------------------------------------------------------------
+volatile uint32 g_sys_tick = 0;
+
 void TIM6_IRQHandler (void)
 {
+    g_sys_tick++;
+
     encoder_diffl = encoder_get_count(TIM3_ENCODER);  // 获取左轮编码器计数值
     encoder_clear_count(TIM3_ENCODER);                // 清空左轮编码器计数值
     motor_speedl = encoder_diffl / (5.0f * 0.001f);   // 计算左轮速度，单位为脉冲数/秒

@@ -1,8 +1,8 @@
 .\objects\key.o: ..\user\src\key.c
 .\objects\key.o: ..\user\inc\key.h
+.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\key.o: ..\user\inc\mymenu.h
 .\objects\key.o: ..\user\inc\menu.h
-.\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
 .\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\key.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h

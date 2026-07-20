@@ -4,6 +4,7 @@
 #include "zf_device_key.h"
 #include "zf_driver_gpio.h"
 
+
 #define DOUBLE_CLICK_TICKS 30
 #define INITIAL_DELAY 50
 #define REPEAT_DELAY 10
@@ -18,17 +19,33 @@ static uint8_t key2_repeat = 0;
 static bool key1_held = false;
 static bool key2_held = false;
 
-void key_handle(void) {
+void key_state_reset(void)
+{
+    tick = 0;
+    key3_press_tick = 0;
+    key4_press_tick = 0;
+    key3_pending = false;
+    key4_pending = false;
+    key1_repeat = 0;
+    key2_repeat = 0;
+    key1_held = false;
+    key2_held = false;
+}
+
+bool key_handle(void) {
+  bool action = false;
   key_scanner();
   tick++;
 
   if (key3_pending && (tick - key3_press_tick > DOUBLE_CLICK_TICKS)) {
     key_3();
     key3_pending = false;
+    action = true;
   }
   if (key4_pending && (tick - key4_press_tick > DOUBLE_CLICK_TICKS)) {
     back_folder();
     key4_pending = false;
+    action = true;
   }
 
   key_state_enum s1 = key_get_state(KEY_1);
@@ -47,6 +64,7 @@ void key_handle(void) {
     if (key3_pending) {
       key_3_double();
       key3_pending = false;
+      action = true;
     } else {
       key3_pending = true;
       key3_press_tick = tick;
@@ -57,6 +75,7 @@ void key_handle(void) {
     if (key4_pending) {
       key_4_double();
       key4_pending = false;
+      action = true;
     } else {
       key4_pending = true;
       key4_press_tick = tick;
@@ -68,11 +87,13 @@ void key_handle(void) {
       key1_held = true;
       key_1();
       key1_repeat = INITIAL_DELAY;
+      action = true;
     } else if (key1_repeat > 0) {
       key1_repeat--;
       if (key1_repeat == 0) {
         key_1();
         key1_repeat = REPEAT_DELAY;
+        action = true;
       }
     }
   } else {
@@ -85,15 +106,19 @@ void key_handle(void) {
       key2_held = true;
       key_2();
       key2_repeat = INITIAL_DELAY;
+      action = true;
     } else if (key2_repeat > 0) {
       key2_repeat--;
       if (key2_repeat == 0) {
         key_2();
         key2_repeat = REPEAT_DELAY;
+        action = true;
       }
     }
   } else {
     key2_held = false;
     key2_repeat = 0;
   }
+
+  return action;
 }

@@ -20,7 +20,7 @@ extern float Kd;  // PID控制器的微分增益
 extern float target_speedl;  // 左轮目标速度
 extern float target_speedr;  // 右轮目标速度
 
-extern float base_speed;   // 巡线基础速度
+extern int base_speed;   // 巡线基础速度
 extern float Kp_steer;     // 方向P系数
 extern float Kd_steer;     // 方向D系数
 
@@ -30,5 +30,6 @@ void motorr_set_pwm(int rpwm);
 void init_encoder(void);
 void get_motor_speed(void);
 void motor_pid_speedcontrol(void);
+void motor_pid_reset(void);
 
 #endif  // __MOTOR_H_

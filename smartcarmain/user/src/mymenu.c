@@ -26,7 +26,7 @@ void Init_menu(void) {
 
   MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
   MenuItem* motor_folder = dynamic_create_menu_folder(&head, "motor");
-  MenuItem* folder2 = dynamic_create_menu_folder(&head, "folder2");
+  MenuItem* xunxian_folder = dynamic_create_menu_folder(&head, "xunxian");
   
 
 
@@ -39,6 +39,9 @@ void Init_menu(void) {
   dynamic_create_menu_txt(motor_folder, "target_speedr", &target_speedr, float_box);
   dynamic_create_menu_txt(motor_folder, "real_speedl", &real_speedl, float_box);
   dynamic_create_menu_txt(motor_folder, "real_speedr", &real_speedr, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "base_speed", &base_speed, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "Kp_steer", &Kp_steer, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "Kd_steer", &Kd_steer, float_box);
   dynamic_create_menu_txt(&head, "threshold", &threshold, uint8_box);
 
   current_index = head.first_son;
@@ -197,12 +200,12 @@ void key_3_double(void) {
 }
 
 void key_4_double(void) {
-  if (target_speedl == 0.0f) {
-    target_speedl = 200.0f;
-    //target_speedr = 200.0f;
+  if (base_speed == 0.0f) {
+    base_speed = 200.0f;
   } else {
+    base_speed = 0.0f;
     target_speedl = 0.0f;
-    //target_speedr = 0.0f;
+    target_speedr = 0.0f;
   }
 }
 

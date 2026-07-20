@@ -15,6 +15,10 @@ float real_speedr = 0.0f;
 float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
+int base_speed = 150;   // 巡线基础速度
+float Kp_steer = 0.95f;     // 方向P系数
+float Kd_steer = 0.0f;     // 方向D系数
+
 void motor_init(void) 
 {
   // 初始化电机控制引脚
@@ -80,12 +84,20 @@ void get_motor_speed(void)
 }
 
 
+static float errl_k1, errl_k2;
+static float errr_k1, errr_k2;
+static float control_effortl, control_effortr;
+
+void motor_pid_reset(void)
+{
+    errl_k1 = errl_k2 = 0;
+    errr_k1 = errr_k2 = 0;
+    control_effortl = control_effortr = 0;
+}
+
 //pid闭环控制电机转速
 void motor_pid_speedcontrol(void)
 {
-    static float errl_k1 = 0, errl_k2 = 0;
-    static float errr_k1 = 0, errr_k2 = 0;
-    static float control_effortl = 0, control_effortr = 0;
 
     float errl = target_speedl - real_speedl;
     float errr = target_speedr - real_speedr;

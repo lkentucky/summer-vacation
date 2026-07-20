@@ -83,100 +83,127 @@ void set_image_twovalues(uint8 thr)
 //找出图像基点
 void find_base_point(void)
 {
-    //判断二分之一点是不是白点
-    if (twovalues_image[MT9V03X_H-1][MT9V03X_W / 2] == 255&&twovalues_image[MT9V03X_H-1][MT9V03X_W / 2+1] == 255&&twovalues_image[MT9V03X_H-1][MT9V03X_W / 2-1] == 255)
+    uint8 row = MT9V03X_H -1; // 选择图像的第 110 行作为基点搜索行
+    uint8 found = 0;
+
+    // 优先用图像正中间(W/2)
+    if ( twovalues_image[row][MT9V03X_W / 2] == 255
+        && twovalues_image[row][MT9V03X_W / 2 + 1] == 255
+        && twovalues_image[row][MT9V03X_W / 2 - 1] == 255)
     {
-       //寻找左边界基点
         for (uint16 i = MT9V03X_W / 2; i > 0; i--)
         {
-            if (twovalues_image[MT9V03X_H-1][i-1] == 0&&twovalues_image[MT9V03X_H-1][i] == 255&&twovalues_image[MT9V03X_H-1][i+1] == 255)
+            if (twovalues_image[row][i - 1] == 0 && twovalues_image[row][i] == 255 && twovalues_image[row][i + 1] == 255)
             {
                 base_point_left = i + 1;
+                
                 break;
             }
-            if(i == 0)
+            if(i-1==0)
             {
-                base_point_left = 0;
+                base_point_left=2;
+                
+                break;
             }
         }
-        //寻找右边界基点
         for (uint16 i = MT9V03X_W / 2; i < MT9V03X_W; i++)
         {
-            if (twovalues_image[MT9V03X_H-1][i] == 0&&twovalues_image[MT9V03X_H-1][i-1] == 255&&twovalues_image[MT9V03X_H-1][i-2] == 255)
+            if (twovalues_image[row][i] == 0 && twovalues_image[row][i - 1] == 255 && twovalues_image[row][i - 2] == 255)
             {
                 base_point_right = i - 1;
+                
                 break;
             }
-            if(i == MT9V03X_W)
+            if(i+1==MT9V03X_W-1)
             {
-                base_point_right = MT9V03X_W-1;
+                base_point_right=MT9V03X_W-3;
+                
+                break;
             }
         }
+        
     }
 
-
-
-    //判断四分之一点是不是白点
-    if (twovalues_image[MT9V03X_H-1][MT9V03X_W / 4] == 255&&twovalues_image[MT9V03X_H-1][MT9V03X_W / 4+1] == 255&&twovalues_image[MT9V03X_H-1][MT9V03X_W / 4-1] == 255)
+    // 中间被遮挡时，用左侧四分之一处
+    else if (twovalues_image[row][MT9V03X_W / 4] == 255
+        && twovalues_image[row][MT9V03X_W / 4 + 1] == 255
+        && twovalues_image[row][MT9V03X_W / 4 - 1] == 255)
     {
-       //寻找左边界基点
         for (uint16 i = MT9V03X_W / 4; i > 0; i--)
         {
-            if (twovalues_image[MT9V03X_H-1][i-1] == 0&&twovalues_image[MT9V03X_H-1][i] == 255&&twovalues_image[MT9V03X_H-1][i+1] == 255)
+            if (twovalues_image[row][i - 1] == 0 && twovalues_image[row][i] == 255 && twovalues_image[row][i + 1] == 255)
             {
                 base_point_left = i + 1;
+                
                 break;
             }
-            if(i == 0)
+            if(i-1==0)
             {
-                base_point_left = 0;
+                base_point_left=2;
+                
+                break;
             }
         }
-        //寻找右边界基点
         for (uint16 i = MT9V03X_W / 4; i < MT9V03X_W; i++)
         {
-            if (twovalues_image[MT9V03X_H-1][i] == 0&&twovalues_image[MT9V03X_H-1][i-1] == 255&&twovalues_image[MT9V03X_H-1][i-2] == 255)
+            if (twovalues_image[row][i] == 0 && twovalues_image[row][i - 1] == 255 && twovalues_image[row][i - 2] == 255)
             {
                 base_point_right = i - 1;
+                
                 break;
             }
-            if(i == MT9V03X_W)
+            if(i+1==MT9V03X_W-1)
             {
-                base_point_right = MT9V03X_W-1;
+                base_point_right=MT9V03X_W-3;
+                
+                break;
             }
         }
+        
     }
 
-
-    //判断四分之三点是不是白点
-    if (twovalues_image[MT9V03X_H-1][MT9V03X_W / 4 * 3] == 255&&twovalues_image[MT9V03X_H-1][MT9V03X_W / 4 * 3+1] == 255&&twovalues_image[MT9V03X_H-1][MT9V03X_W / 4 * 3-1] == 255)
+    // 最后尝试右侧四分之三处
+    else if (twovalues_image[row][MT9V03X_W / 4 * 3] == 255
+        && twovalues_image[row][MT9V03X_W / 4 * 3 + 1] == 255
+        && twovalues_image[row][MT9V03X_W / 4 * 3 - 1] == 255)
     {
-       //寻找左边界基点
         for (uint16 i = MT9V03X_W / 4 * 3; i > 0; i--)
         {
-            if (twovalues_image[MT9V03X_H-1][i-1] == 0&&twovalues_image[MT9V03X_H-1][i] == 255&&twovalues_image[MT9V03X_H-1][i+1] == 255)
+            if (twovalues_image[row][i - 1] == 0 && twovalues_image[row][i] == 255 && twovalues_image[row][i + 1] == 255)
             {
                 base_point_left = i + 1;
+                
                 break;
             }
-            if(i == 0)
+            if(i-1==0)
             {
-                base_point_left = 0;
+                base_point_left=2;
+                
+                break;
             }
         }
-        //寻找右边界基点
         for (uint16 i = MT9V03X_W / 4 * 3; i < MT9V03X_W; i++)
         {
-            if (twovalues_image[MT9V03X_H-1][i] == 0&&twovalues_image[MT9V03X_H-1][i-1] == 255&&twovalues_image[MT9V03X_H-1][i-2] == 255)
+            if (twovalues_image[row][i] == 0 && twovalues_image[row][i - 1] == 255 && twovalues_image[row][i - 2] == 255)
             {
                 base_point_right = i - 1;
+                
                 break;
             }
-            if(i == MT9V03X_W)
+            if(i+1==MT9V03X_W-1)
             {
-                base_point_right = MT9V03X_W-1;
+                base_point_right=MT9V03X_W-3;
+                
+                break;
             }
         }
+        
+    }
+
+    else
+    {
+        base_point_left = 0;
+        base_point_right = MT9V03X_W - 1;
     }
 }
 
@@ -185,7 +212,7 @@ void find_boundary(void)
 {
      uint8 left_point=base_point_left;    // 左边界从基点开始搜
      uint8 right_point=base_point_right;  // 右边界从基点开始搜
-     for(uint16 i=MT9V03X_H-1;i>search_end_line;i--)  // 从下往上搜
+     for(uint16 i=MT9V03X_H-2;i>search_end_line;i--)  // 从下往上搜
      {
         uint8 flag_leftpoint_left_search=0;  // 标记左边界点向右搜索范围的最右边还没找到左边界点(开始向左搜索)
         uint8 flag_leftpoint_mid_search=0;  // 标记左边界点向左搜索范围的最左边还没找到左边界点（开始由中间向左搜索）
@@ -200,9 +227,10 @@ void find_boundary(void)
                  left_point=j;
                  break;
              }
-             if(j==MT9V03X_W-1)  // 如果搜索到图像最右边还没找到左边界点，则将左边界点设置为图像最右边-2
+             if(j+2==MT9V03X_W-1)  // 如果搜索到图像最右边还没找到左边界点，则将左边界点设置为图像最右边-2
              {
                  left_point=MT9V03X_W-3;
+                 break;
              }
              if(j==left_point+left_search_right_range-1)  // 如果搜索到左边界搜索范围的最右边还没找到左边界点，则将左边界点设置为搜索范围的最右边
              {
@@ -221,9 +249,10 @@ void find_boundary(void)
                     }
                     if(j==2)  // 如果搜索到图像最左边还没找到左边界点，则将左边界点设置为图像最左边+2
                     {
-                        left_point=0;
+                        left_point=2;
+                        break;
                     }
-                    if(j==left_point+left_search_left_range-1)  // 如果搜索到左边界向右搜索范围的最左边还没找到左边界点，则向右5个像素点搜索左边界
+                    if(j==left_point-left_search_left_range+1)  // 如果搜索到左边界向右搜索范围的最左边还没找到左边界点，则向右5个像素点搜索左边界
                     {
                         flag_leftpoint_mid_search=1;  // 标记左边界点搜索范围的最左边还没找到左边界点
                     }
@@ -241,7 +270,8 @@ void find_boundary(void)
                     }
                     if(j==2)  // 如果搜索到图像最左边还没找到左边界点，则将左边界点设置为图像最左边+2
                     {
-                        left_point=0;
+                        left_point=2;
+                        break;
                     }
                 }
             }
@@ -253,11 +283,12 @@ void find_boundary(void)
                  right_point=j;
                  break;
              }
-             if(j==0)  // 如果搜索到图像最左边还没找到右边界点，则将右边界点设置为图像最左边+2
+             if(j==2)  // 如果搜索到图像最左边还没找到右边界点，则将右边界点设置为图像最左边+2
              {
                  right_point=2;
+                 break;
              }
-             if(j==right_point-right_search_left_range+1)  // 如果搜索到右边界向左搜索范围的最左边还没找到右边界点，则向右5个像素点搜索右边界
+             if(j==right_point+right_search_left_range-1)  // 如果搜索到右边界向左搜索范围的最左边还没找到右边界点，则向右5个像素点搜索右边界
              {
                 flag_rightpoint_right_search=1;  // 标记右边界点搜索范围的最左边还没找到右边界点
              }
@@ -272,11 +303,12 @@ void find_boundary(void)
                         right_point=j;
                         break;
                     }
-                    if(j==MT9V03X_W-3)  // 如果搜索到图像最右边还没找到右边界点，则将右边界点设置为图像最右边-2
+                    if(j+2==MT9V03X_W-1)  // 如果搜索到图像最右边还没找到右边界点，则将右边界点设置为图像最右边-2
                     {
-                        right_point=MT9V03X_W-2;
+                        right_point=MT9V03X_W-3;
+                        break;
                     }
-                    if(j==right_point-right_search_right_range+1)  // 如果搜索到右边界向右搜索范围的最右边还没找到右边界点，则由中间向右搜索右边界
+                    if(j==right_point+right_search_right_range-1)  // 如果搜索到右边界向右搜索范围的最右边还没找到右边界点，则由中间向右搜索右边界
                     {
                         flag_rightpoint_mid_search=1;  // 标记右边界点搜索范围的最右边还没找到右边界点
                     }
@@ -294,7 +326,8 @@ void find_boundary(void)
                     }
                     if(j==MT9V03X_W-3)  // 如果搜索到图像最右边还没找到右边界点，则将右边界点设置为图像最右边-2
                     {
-                        right_point=MT9V03X_W-2;
+                        right_point=MT9V03X_W-3;
+                        break;
                     }
                 }
             }

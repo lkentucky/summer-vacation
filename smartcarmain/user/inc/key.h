@@ -1,6 +1,9 @@
 #ifndef __KEY_H_
 #define __KEY_H_
 
-void key_handle(void);
+#include <stdbool.h>
+
+bool key_handle(void);
+void key_state_reset(void);
 
 #endif

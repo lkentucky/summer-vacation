@@ -38,4 +38,6 @@
 
 #include "zf_common_headfile.h"
 
+extern volatile uint32 g_sys_tick;
+
 #endif

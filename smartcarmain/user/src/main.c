@@ -64,32 +64,67 @@ int main(void) {
    
   motor_init();  // 初始化电机控制引脚和PWM输出
   init_encoder();  // 初始化编码器
-  pit_ms_init(TIM6_PIT, 5);  // 初始化定时器中断，周期为5ms
-  
+
+  key_state_reset();   // 复位按键状态（热复位兼容）
+  motor_pid_reset();   // 复位PID积分（热复位兼容）
+  pit_ms_init(TIM6_PIT, 5);   // TIM6: PID控速，5ms
+
+  Show_menu();  // 首次显示菜单
+
+  enum { STEP_IDLE, STEP_PROCESS, STEP_BOUNDARY, STEP_STEER, STEP_DISPLAY };
 
   while (1) {
-    key_handle();  // 处理按键输入
-    Show_menu();   // 持续刷新屏幕
-    if (mt9v03x_finish_flag)
-    {
-      static uint8 frame_skip = 0;
-      mt9v03x_finish_flag = 0;
+    static uint32 last_key_tick = 0;
+    static uint32 last_display_tick = 0;
+    static uint8 step = STEP_IDLE;
+    static uint8 frame_skip = 9;
+
+    if (g_sys_tick - last_key_tick >= 2) {
+      last_key_tick = g_sys_tick;
+      if (key_handle())
+        Show_menu();
+    }
+
+    switch (step) {
+    case STEP_IDLE:
+      if (mt9v03x_finish_flag && g_sys_tick - last_display_tick >= 4) {
+        mt9v03x_finish_flag = 0;
+        step = STEP_PROCESS;
+      }
+      break;
+    case STEP_PROCESS:
       memcpy(base_image, mt9v03x_image, sizeof(base_image));
-      uint8 thresholdb = otsu_threshold(base_image);  // 使用大津法计算阈值
-      set_image_twovalues(thresholdb);  // 根据阈值进行二值化处理
-      find_base_point();      // 找出图像基点
-      find_boundary();        // 找出赛道边界
-      if (++frame_skip >= 3)
-      {
+      uint8 thresholdb = otsu_threshold(base_image);
+      set_image_twovalues(thresholdb);
+      find_base_point();
+      step = STEP_BOUNDARY;
+      break;
+    case STEP_BOUNDARY:
+      find_boundary();
+      step = STEP_STEER;
+      break;
+    case STEP_STEER:
+      if (base_speed > 0) {
+        int16 error = (int16)mid_line[110] - 94;
+        int16 error_far = (int16)mid_line[50] - 94;
+        float steering = Kp_steer * error - Kd_steer * (error - error_far);
+        target_speedl = base_speed + steering;
+        target_speedr = base_speed - steering;
+      }
+      step = STEP_DISPLAY;
+      break;
+    case STEP_DISPLAY:
+      draw_boundary();
+      if (++frame_skip >= 10) {
         frame_skip = 0;
         ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H,
-                               188, 120, threshold);  // 显示摄像头图像
+                               188, 120, thresholdb);
       }
-      draw_boundary();  // 在屏幕上绘制赛道边界
+      printf("%.2f,%d,%.2f,%d\n", real_speedl, (int)target_speedl, real_speedr, (int)target_speedr);
+      last_display_tick = g_sys_tick;
+      step = STEP_IDLE;
+      break;
     }
-    printf(" %.2f,%d,%.2f,%d\n", real_speedl, (int)target_speedl, real_speedr, (int)target_speedr);  // 打印速度值
-    system_delay_ms(10);
-
   }
 }
 // **************************** 代码区域 ****************************
