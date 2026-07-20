@@ -7,9 +7,9 @@ uint8 base_point_left;
 uint8 base_point_right;
 uint8 search_end_line=30;  // 搜索赛道边界的终止行数
 uint8 left_search_right_range=10;  // 左边界向右搜索范围
-uint8 left_search_left_range=5;   // 左边界向左搜索范围
+uint8 left_search_left_range=10;   // 左边界向左搜索范围
 uint8 right_search_left_range=10;  // 右边界向左搜索范围
-uint8 right_search_right_range=5;  // 右边界向右搜索范围
+uint8 right_search_right_range=10;  // 右边界向右搜索范围
 uint8 left_line[MT9V03X_H];  // 左边界数组
 uint8 right_line[MT9V03X_H];  // 右边界数组
 uint8 mid_line[MT9V03X_H];   // 中间线数组
@@ -288,7 +288,7 @@ void find_boundary(void)
                  right_point=2;
                  break;
              }
-             if(j==right_point+right_search_left_range-1)  // 如果搜索到右边界向左搜索范围的最左边还没找到右边界点，则向右5个像素点搜索右边界
+             if(j==right_point-right_search_left_range+1)  // 如果搜索到右边界向左搜索范围的最左边还没找到右边界点，则向右5个像素点搜索右边界
              {
                 flag_rightpoint_right_search=1;  // 标记右边界点搜索范围的最左边还没找到右边界点
              }

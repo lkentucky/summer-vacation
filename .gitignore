@@ -1,0 +1,47 @@
+# IDE / editor cache
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# clangd cache
+.cache/
+**/.cache/
+compile_commands.json
+
+# Keil / MDK generated files
+**/mdk/Objects/
+**/mdk/Listings/
+**/mdk/RTE/_*
+**/mdk/EventRecorderStub.scvd
+*.o
+*.obj
+*.d
+*.crf
+*.htm
+*.map
+*.lst
+*.lnp
+*.axf
+*.elf
+*.hex
+*.bin
+*.lib
+*.dep
+*.iex
+*.sct
+*.bak
+*.uvguix.*
+*.uvoptx
+*.uvgui.*
+*.uvgui_*
+
+# Keep project/source files tracked
+!*.uvprojx
+!*.uvmpw
+!*.c
+!*.h
+!*.s
+!*.S
+!*.md

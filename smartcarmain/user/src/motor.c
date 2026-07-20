@@ -15,9 +15,9 @@ float real_speedr = 0.0f;
 float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
-int base_speed = 150;   // 巡线基础速度
-float Kp_steer = 0.95f;     // 方向P系数
-float Kd_steer = 0.0f;     // 方向D系数
+int base_speed = 100;   // 巡线基础速度
+float Kp_steer = 0.70f;     // 方向P系数
+float Kd_steer = 0.10f;     // 方向D系数
 
 void motor_init(void) 
 {

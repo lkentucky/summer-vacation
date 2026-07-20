@@ -94,8 +94,8 @@ int main(void) {
       break;
     case STEP_PROCESS:
       memcpy(base_image, mt9v03x_image, sizeof(base_image));
-      uint8 thresholdb = otsu_threshold(base_image);
-      set_image_twovalues(thresholdb);
+      //uint8 thresholdb = otsu_threshold(base_image);
+      set_image_twovalues(threshold);
       find_base_point();
       step = STEP_BOUNDARY;
       break;
@@ -106,8 +106,8 @@ int main(void) {
     case STEP_STEER:
       if (base_speed > 0) {
         int16 error = (int16)mid_line[110] - 94;
-        int16 error_far = (int16)mid_line[50] - 94;
-        float steering = Kp_steer * error - Kd_steer * (error - error_far);
+        int16 error_far = (int16)(mid_line[30] - 94);
+        float steering = Kp_steer * error + Kd_steer * (error - error_far);
         target_speedl = base_speed + steering;
         target_speedr = base_speed - steering;
       }
@@ -118,7 +118,7 @@ int main(void) {
       if (++frame_skip >= 10) {
         frame_skip = 0;
         ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H,
-                               188, 120, thresholdb);
+                               188, 120, threshold);
       }
       printf("%.2f,%d,%.2f,%d\n", real_speedl, (int)target_speedl, real_speedr, (int)target_speedr);
       last_display_tick = g_sys_tick;
