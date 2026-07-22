@@ -20,9 +20,11 @@ extern float Kd;  // PID控制器的微分增益
 extern float target_speedl;  // 左轮目标速度
 extern float target_speedr;  // 右轮目标速度
 
-extern int base_speed;   // 巡线基础速度
+extern int base_speed;       // 当前运行速度，0 表示停车
+extern int run_base_speed;   // 菜单可调的启动/巡线速度
 extern float Kp_steer;     // 方向P系数
-extern float Kd_steer;     // 方向D系数
+extern float Kd_steer_position;     // 方向D系数
+extern float Kd_steer_time;     // 方向D系数
 
 void motor_init(void);
 void motorl_set_pwm(int lpwm);

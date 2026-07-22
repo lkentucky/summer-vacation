@@ -27,7 +27,7 @@ void Init_menu(void) {
   MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
   MenuItem* motor_folder = dynamic_create_menu_folder(&head, "motor");
   MenuItem* xunxian_folder = dynamic_create_menu_folder(&head, "xunxian");
-  
+
 
 
   dynamic_create_menu_txt(pid_folder, "Kp", &Kp, float_box);
@@ -39,9 +39,10 @@ void Init_menu(void) {
   dynamic_create_menu_txt(motor_folder, "target_speedr", &target_speedr, float_box);
   dynamic_create_menu_txt(motor_folder, "real_speedl", &real_speedl, float_box);
   dynamic_create_menu_txt(motor_folder, "real_speedr", &real_speedr, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "base_speed", &base_speed, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "run_speed", &run_base_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "Kp_steer", &Kp_steer, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "Kd_steer", &Kd_steer, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "Kd_steer_position", &Kd_steer_position, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "Kd_steer_time", &Kd_steer_time, float_box);
   dynamic_create_menu_txt(&head, "threshold", &threshold, uint8_box);
 
   current_index = head.first_son;
@@ -66,27 +67,27 @@ void Show_txt(void) {
 
   if (current_index->kind == menu_folder) return;
   if (current_index->editing) {
-    ips200_show_string(112, current_index->seq * 16, "|");
+    ips200_show_string(142, current_index->seq * 16, "|");
   } else {
-    ips200_show_string(112, current_index->seq * 16, " ");
+    ips200_show_string(142, current_index->seq * 16, " ");
   }
 
   for (int i = 0; i < f->number_of_sons; i++) {
     switch (s->kind) {
       case int32_box:
-        ips200_show_int(120, i * 16, *(int32*)s->data, 5);
+        ips200_show_int(150, i * 16, *(int32*)s->data, 5);
         break;
       case float_box:
-        ips200_show_float(120, i * 16, *(float*)s->data, 5, 2);
+        ips200_show_float(150, i * 16, *(float*)s->data, 5, 2);
         break;
       case bool_box:
         if (*(bool*)s->data) {
-          ips200_show_string(120, i * 16, "on ");
+          ips200_show_string(150, i * 16, "on ");
         } else {
-          ips200_show_string(120, i * 16, "off");
+          ips200_show_string(150, i * 16, "off");
         }
       case uint8_box:
-        ips200_show_int(120, i * 16, *(uint8*)s->data, 3);  
+        ips200_show_int(150, i * 16, *(uint8*)s->data, 3);
         break;
       default:
         break;
@@ -200,12 +201,14 @@ void key_3_double(void) {
 }
 
 void key_4_double(void) {
-  if (base_speed == 0.0f) {
-    base_speed = 200.0f;
+  motor_pid_reset();
+  target_speedl = 0.0f;
+  target_speedr = 0.0f;
+
+  if (base_speed == 0) {
+    base_speed = run_base_speed;  // 使用菜单中的 run_speed，不再写死固定速度
   } else {
-    base_speed = 0.0f;
-    target_speedl = 0.0f;
-    target_speedr = 0.0f;
+    base_speed = 0;
   }
 }
 

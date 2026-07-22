@@ -27,12 +27,13 @@ Project File Date:  07/18/2026
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'mm32f327x_g8p_project'
+compiling main.c...
+..\USER\src\main.c(213): warning:  #177-D: variable "frame_skip"  was declared but never referenced
+      static uint8 frame_skip = 9;
+..\USER\src\main.c: 1 warning, 0 errors
 compiling image.c...
-..\user\src\image.c(87): warning:  #177-D: variable "found"  was declared but never referenced
-      uint8 found = 0;
-..\user\src\image.c: 1 warning, 0 errors
 linking...
-Program Size: Code=33484 RO-data=41336 RW-data=444 ZI-data=81176  
+Program Size: Code=32952 RO-data=41336 RW-data=464 ZI-data=81412  
 ".\Objects\MM32F327X_G8P.axf" - 0 Error(s), 1 Warning(s).
 
 <h2>Software Packages used:</h2>
@@ -47,7 +48,7 @@ Package Vendor: MindMotion
   C:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include
 
 <h2>Collection of Component Files used:</h2>
-Build Time Elapsed:  00:00:00
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>
