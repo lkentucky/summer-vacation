@@ -101,20 +101,20 @@ void TIM5_IRQHandler (void)
 //              默认优先级 修改优先级使用 interrupt_set_priority(TIM6_IRQn, 1);
 //-------------------------------------------------------------------------------------------------------------------
 volatile uint32 g_sys_tick = 0;
-
 void TIM6_IRQHandler (void)
 {
     g_sys_tick++;
 
     encoder_diffl = encoder_get_count(TIM3_ENCODER);  // 获取左轮编码器计数值
     encoder_clear_count(TIM3_ENCODER);                // 清空左轮编码器计数值
-    motor_speedl = encoder_diffl / (5.0f * 0.001f);   // 计算左轮速度，单位为脉冲数/秒
+    motor_speedl = encoder_diffl / (SYS_TICK_SEC);   // 计算左轮速度，单位为脉冲数/秒
 
     encoder_diffr = encoder_get_count(TIM4_ENCODER);  // 获取右轮编码器计数值
     encoder_clear_count(TIM4_ENCODER);                // 清空右轮编码器计数值
-    motor_speedr = encoder_diffr / (5.0f * 0.001f);   // 计算右轮速度，单位为脉冲数/秒
+    motor_speedr = encoder_diffr / (SYS_TICK_SEC);   // 计算右轮速度，单位为脉冲数/秒
 
     get_motor_speed();                                 // 获取电机实际速度
+    steering_control_update();                         // 2ms转向环：使用上一帧图像误差刷新左右轮目标速度
     motor_pid_speedcontrol();            // 调用 PID 控制函数，设置目标速度为 200.0f cm/s
 
     TIM6->SR &= ~TIM6->SR;

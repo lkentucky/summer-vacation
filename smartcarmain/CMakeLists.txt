@@ -41,6 +41,7 @@ set(USER_SOURCES
     ${USER_SRC_DIR}/menu.c
     ${USER_SRC_DIR}/mymenu.c
     ${USER_SRC_DIR}/key.c
+    ${USER_SRC_DIR}/IMU.c
 )
 
 file(GLOB ZFC_SOURCES  "${LIB_ROOT}/zf_common/*.c")

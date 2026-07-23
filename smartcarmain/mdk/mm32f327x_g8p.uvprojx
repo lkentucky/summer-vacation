@@ -421,6 +421,11 @@
               <FileType>1</FileType>
               <FilePath>..\user\src\calculation.c</FilePath>
             </File>
+            <File>
+              <FileName>IMU.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\src\IMU.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -430,6 +435,11 @@
               <FileName>isr.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\user\inc\isr.h</FilePath>
+            </File>
+            <File>
+              <FileName>IMU.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\user\inc\IMU.h</FilePath>
             </File>
           </Files>
         </Group>

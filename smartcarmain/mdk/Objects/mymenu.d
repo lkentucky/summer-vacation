@@ -95,3 +95,4 @@
 .\objects\mymenu.o: ..\user\inc\image.h
 .\objects\mymenu.o: ..\..\libraries\zf_common\zf_common_headfile.h
 .\objects\mymenu.o: ..\user\inc\calculation.h
+.\objects\mymenu.o: ..\user\inc\IMU.h

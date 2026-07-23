@@ -37,18 +37,23 @@
 #include "zf_common_headfile.h"
 #include "isr.h"
 #include "image.h"
+#include "IMU.h"
 #include <string.h>
 #include <stdbool.h>
 // **************************** 代码区域 ****************************
 #define IPS200_TYPE (IPS200_TYPE_SPI)
+#define CAMERA_FPS_TARGET        100
+#define CAMERA_EXPOSURE_TIME      200
+#define CAMERA_GAIN_VALUE         45
+#define IMAGE_PERIOD_MS_DEFAULT   20
+#define IMAGE_PERIOD_MS_MIN       SYS_TICK_MS
+#define IMAGE_PERIOD_MS_MAX       50
+#define IMAGE_STATS_SHOW_FRAMES   20
 #define STEER_CENTER_COL      (MT9V03X_W / 2)
-#define STEER_NEAR_ROW_START  100
-#define STEER_NEAR_ROW_END    119
-#define STEER_FAR_ROW_START   45
+#define STEER_NEAR_ROW_START  60
+#define STEER_NEAR_ROW_END    65
+#define STEER_FAR_ROW_START   60
 #define STEER_FAR_ROW_END     65
-#define STEER_MAX_RATIO       (0.85f)
-#define STEER_MAX_STEP        (15.0f)
-#define STEER_D_GAIN          (0.05f)
 #define TRACK_LOST_ROW_START       92
 #define TRACK_LOST_ROW_END         115
 #define TRACK_LOST_COUNT_TH        23
@@ -64,6 +69,25 @@
 #define TRACK_CENTER_WHITE_HALF_WIDTH  8
 #define TRACK_CENTER_WHITE_COUNT_TH    6
 
+
+int image_period_ms = IMAGE_PERIOD_MS_DEFAULT;  // 图像处理最小间隔，单位ms；设小可降低取帧延迟
+int image_frame_ms = 0;                         // 实际两次处理之间的间隔，单位ms
+int image_proc_ms = 0;                          // 一次图像处理从开始到输出误差的耗时，单位ms
+int image_fps = 0;                              // 实际处理帧率，fps
+int image_wait_count = 0;                       // 检查时摄像头还没给新帧的次数，持续增加代表摄像头FPS低于检查节拍
+
+static uint32 image_ms_to_ticks(int ms)
+{
+  if (ms < IMAGE_PERIOD_MS_MIN) ms = IMAGE_PERIOD_MS_MIN;
+  if (ms > IMAGE_PERIOD_MS_MAX) ms = IMAGE_PERIOD_MS_MAX;
+  image_period_ms = ms;
+  return (uint32)((ms + SYS_TICK_MS - 1) / SYS_TICK_MS);
+}
+
+static uint32 image_ticks_to_ms(uint32 ticks)
+{
+  return ticks * SYS_TICK_MS;
+}
 
 static int16 get_mid_error_average(uint8 start_row, uint8 end_row)
 {
@@ -85,13 +109,6 @@ static int16 get_mid_error_average(uint8 start_row, uint8 end_row)
 
   if (count == 0) return 0;
   return (int16)(sum / count) - STEER_CENTER_COL;
-}
-
-static float limit_float(float value, float min_value, float max_value)
-{
-  if (value > max_value) return max_value;
-  if (value < min_value) return min_value;
-  return value;
 }
 
 static bool track_row_has_visible_road(uint8 row)
@@ -186,11 +203,19 @@ int main(void) {
     system_delay_ms(500);
   }
   ips200_show_string(0, 304, "camera ok     ");
-  mt9v03x_set_exposure_time(512);         // 设置摄像头曝光时间
+  mt9v03x_set_reg(MT9V03X_FPS, CAMERA_FPS_TARGET);  // 提高摄像头目标帧率，实际值受曝光和分辨率限制
+  mt9v03x_set_exposure_time(CAMERA_EXPOSURE_TIME);    // 降低曝光上限有助于提高帧率
   mt9v03x_set_reg(MT9V03X_LR_OFFSET, 0);  // 设置摄像头左右偏移量
   mt9v03x_set_reg(MT9V03X_UD_OFFSET, 0);  // 设置摄像头上下偏移量
-  mt9v03x_set_reg(MT9V03X_GAIN, 32);      // 设置摄像头图像增益
+  mt9v03x_set_reg(MT9V03X_GAIN, CAMERA_GAIN_VALUE); // 曝光降低后适当提高增益
   mt9v03x_set_reg(MT9V03X_PCLK_MODE, 0);  // 设置摄像头像素时钟模式
+
+  ips200_show_string(0, 304, "imu init...   ");
+  if (imu_init()) {
+    ips200_show_string(0, 304, "imu fail      ");
+  } else {
+    ips200_show_string(0, 304, "imu ok        ");
+  }
 
   Init_menu();   // 初始化菜单数据
   key_init(10);  // 初始化按键扫描，10ms周期
@@ -200,7 +225,7 @@ int main(void) {
 
   key_state_reset();   // 复位按键状态（热复位兼容）
   motor_pid_reset();   // 复位PID积分（热复位兼容）
-  pit_ms_init(TIM6_PIT, 5);   // TIM6: PID控速，5ms
+  pit_ms_init(TIM6_PIT, 2);   // TIM6: PID控速，2ms
 
   Show_menu();  // 首次显示菜单
 
@@ -208,12 +233,20 @@ int main(void) {
 
   while (1) {
     static uint32 last_key_tick = 0;
-    static uint32 last_display_tick = 0;
+    static uint32 next_image_tick = 0;
+    static uint32 last_image_tick = 0;
+    static uint32 image_process_start_tick = 0;
     static uint8 step = STEP_IDLE;
-    static uint8 frame_skip = 9;
+    static uint8 frame_skip = 0;
     static int last_base_speed = 0;
     static uint8 track_lost_frame_count = 0;
     static uint8 track_start_grace_count = 0;
+    static uint32 last_imu_tick = 0;
+
+    if (g_sys_tick - last_imu_tick >= 2) {
+      last_imu_tick = g_sys_tick;
+      imu_update();
+    }
 
     if (g_sys_tick - last_key_tick >= 2) {
       last_key_tick = g_sys_tick;
@@ -237,9 +270,25 @@ int main(void) {
 
     switch (step) {
     case STEP_IDLE:
-      if (mt9v03x_finish_flag && g_sys_tick - last_display_tick >= 4) {
+      // 低延迟取帧：主循环持续检查 finish_flag，有新帧且满足最小处理间隔就立即处理。
+      // image_period_ms 现在表示最小处理间隔；设得小一些可以减少取帧延迟，实际fps仍由摄像头决定。
+      if (mt9v03x_finish_flag &&
+          (last_image_tick == 0 ||
+           (int32)(g_sys_tick - last_image_tick) >= (int32)image_ms_to_ticks(image_period_ms))) {
         mt9v03x_finish_flag = 0;
+        if (last_image_tick != 0) {
+          image_frame_ms = (int)image_ticks_to_ms(g_sys_tick - last_image_tick);
+          image_fps = (image_frame_ms > 0) ? (1000 / image_frame_ms) : 0;
+        }
+        last_image_tick = g_sys_tick;
+        image_process_start_tick = g_sys_tick;
+        next_image_tick = g_sys_tick + image_ms_to_ticks(image_period_ms);
         step = STEP_PROCESS;
+      } else if ((int32)(g_sys_tick - next_image_tick) >= 0) {
+        next_image_tick = g_sys_tick + image_ms_to_ticks(image_period_ms);
+        if (!mt9v03x_finish_flag && image_wait_count < 999999) {
+          image_wait_count++;
+        }
       }
       break;
     case STEP_PROCESS:
@@ -269,48 +318,30 @@ int main(void) {
           ips200_show_string(0, 288, "TRACK LOST STOP ");
           step = STEP_IDLE;
         } else {
-          step = STEP_RING;
+          step = STEP_STEER;
         }
       } else {
-        step = STEP_RING;
+        step = STEP_STEER;
       }
       break;
-    case STEP_RING:
-      ring_state_process();  // Handle ring detection logic here
-      step = STEP_STEER;
-      break;
+    // case STEP_RING:
+    //   ring_state_process();  // Handle ring detection logic here
+    //   step = STEP_STEER;
+    //   break;
     case STEP_STEER:
-      {
-        static int16 last_error = 0;
-        static float last_steering = 0.0f;
-
-        if (base_speed > 0) {
-          int16 error_near = get_mid_error_average(STEER_NEAR_ROW_START, STEER_NEAR_ROW_END);
-          int16 error_far = get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END);
-          int16 preview_error = error_far - error_near;  // 前瞻项：看前方赛道弯向
-          int16 d_error = error_near - last_error;       // 真正的时间微分项：抑制摆动
-
-          float steering = Kp_steer * error_near
-                         + Kd_steer_position * preview_error
-                         + Kd_steer_time * d_error;
-
-          float max_steering = (float)base_speed * STEER_MAX_RATIO;
-          steering = limit_float(steering, -max_steering, max_steering);
-          steering = limit_float(steering,
-                                 last_steering - STEER_MAX_STEP,
-                                 last_steering + STEER_MAX_STEP);
-
-          last_error = error_near;
-          last_steering = steering;
-
-          target_speedl = base_speed + steering;
-          target_speedr = base_speed - steering;
-        } else {
-          last_error = 0;
-          last_steering = 0.0f;
-          target_speedl = 0.0f;
-          target_speedr = 0.0f;
-        }
+      // 图像处理只负责按固定节拍更新赛道偏差；真正的转向环在TIM6中每2ms计算一次。
+      steering_set_image_error(get_mid_error_average(STEER_NEAR_ROW_START, STEER_NEAR_ROW_END),
+                               get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END));
+      image_proc_ms = (int)image_ticks_to_ms(g_sys_tick - image_process_start_tick);
+      if (++frame_skip >= IMAGE_STATS_SHOW_FRAMES) {
+        frame_skip = 0;
+        ips200_show_string(0, 272, "IMG " );
+        ips200_show_int(32, 272, image_frame_ms, 3);
+        ips200_show_string(58, 272, "ms " );
+        ips200_show_int(82, 272, image_fps, 3);
+        ips200_show_string(108, 272, "fps " );
+        ips200_show_int(142, 272, image_proc_ms, 2);
+        ips200_show_string(160, 272, "ms");
       }
       step = STEP_IDLE;
       break;

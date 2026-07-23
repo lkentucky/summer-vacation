@@ -95,3 +95,4 @@
 .\objects\motor.o: ..\user\inc\image.h
 .\objects\motor.o: ..\..\libraries\zf_common\zf_common_headfile.h
 .\objects\motor.o: ..\user\inc\calculation.h
+.\objects\motor.o: ..\user\inc\IMU.h

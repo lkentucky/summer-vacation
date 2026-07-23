@@ -31,6 +31,8 @@ void motorl_set_pwm(int lpwm);
 void motorr_set_pwm(int rpwm);
 void init_encoder(void);
 void get_motor_speed(void);
+void steering_set_image_error(int16 error_near, int16 error_far);
+void steering_control_update(void);
 void motor_pid_speedcontrol(void);
 void motor_pid_reset(void);
 

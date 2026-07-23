@@ -95,3 +95,4 @@
 .\objects\main.o: ..\user\inc\image.h
 .\objects\main.o: ..\user\inc\calculation.h
 .\objects\main.o: ..\user\inc\isr.h
+.\objects\main.o: ..\user\inc\IMU.h

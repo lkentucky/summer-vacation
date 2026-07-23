@@ -4,6 +4,7 @@
 #include "zf_device_ips200.h"
 #include "zf_driver_pit.h"
 #include "motor.h"
+#include "IMU.h"
 
 MenuItem head;
 MenuItem* current_index;
@@ -12,6 +13,11 @@ MenuItem* current_index;
 bool state = true;
 uint8 threshold = 230;
 int pwm = 1000;
+extern int image_period_ms;
+extern int image_frame_ms;
+extern int image_proc_ms;
+extern int image_fps;
+extern int image_wait_count;
 
 void Init_menu(void) {
   // 初始化head
@@ -27,6 +33,7 @@ void Init_menu(void) {
   MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
   MenuItem* motor_folder = dynamic_create_menu_folder(&head, "motor");
   MenuItem* xunxian_folder = dynamic_create_menu_folder(&head, "xunxian");
+  MenuItem* image_folder = dynamic_create_menu_folder(&head, "image");
 
 
 
@@ -43,6 +50,13 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "Kp_steer", &Kp_steer, float_box);
   dynamic_create_menu_txt(xunxian_folder, "Kd_steer_position", &Kd_steer_position, float_box);
   dynamic_create_menu_txt(xunxian_folder, "Kd_steer_time", &Kd_steer_time, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "Kgyro_steer", &Kgyro_steer, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
+  dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);
+  dynamic_create_menu_txt(image_folder, "frame_ms", &image_frame_ms, int32_box);
+  dynamic_create_menu_txt(image_folder, "proc_ms", &image_proc_ms, int32_box);
+  dynamic_create_menu_txt(image_folder, "fps", &image_fps, int32_box);
+  dynamic_create_menu_txt(image_folder, "wait", &image_wait_count, int32_box);
   dynamic_create_menu_txt(&head, "threshold", &threshold, uint8_box);
 
   current_index = head.first_son;
