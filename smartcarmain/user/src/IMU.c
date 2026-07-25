@@ -11,7 +11,7 @@ float imu_gyro_z_dps_filter = 0.0f;
 float imu_pitch             = 0.0f;
 float imu_roll              = 0.0f;
 float imu_yaw               = 0.0f;
-float Kgyro_steer           = 0.15f;
+float Kgyro_steer           = 0.45f;
 
 static float gyro_bias_x = 0.0f;
 static float gyro_bias_y = 0.0f;
