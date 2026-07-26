@@ -312,9 +312,9 @@ void draw_boundary(void)
 {
     for (uint16 i = search_end_line; i < MT9V03X_H; i++)
     {
-        ips200_draw_point(left_line[i], 100 + i, RGB565_RED);
-        ips200_draw_point(right_line[i], 100 + i, RGB565_BLUE);
-        ips200_draw_point(mid_line[i], 100 + i, RGB565_GREEN);
+        ips200_draw_point(left_line[i], 120 + i, RGB565_RED);
+        ips200_draw_point(right_line[i], 120 + i, RGB565_BLUE);
+        ips200_draw_point(mid_line[i], 120 + i, RGB565_GREEN);
     }
 }
 

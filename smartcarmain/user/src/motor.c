@@ -19,8 +19,9 @@ float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
-int run_base_speed = 200; // 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed
-float Kp_steer = 5.5f;     // 方向P系数
+int run_base_speed = 230; // 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed
+float Kp_steer = 4.17f;     // 方向P系数
+float Kp_steer_square = 0.11f;     // 平方项P系数
 float Kd_steer_position = 0.0f;     // 方向D系数
 float Kd_steer_time = 0.01f;     // 方向D系数
 
@@ -52,7 +53,8 @@ void steering_control_update(void)
     int16 preview_error = error_far - error_near;
     int16 d_error = error_near - steer_last_error;
 
-    float steering = Kp_steer * error_far
+    float steering = Kp_steer * error_near
+                   + Kp_steer_square * error_near * float_abs(error_near)
                    + Kd_steer_position * preview_error
                    + Kd_steer_time * d_error
                    + imu_get_steer_damping();
@@ -83,8 +85,8 @@ void motor_init(void)
   gpio_init(MOTORR_DIR, GPO, GPIO_HIGH, GPO_PUSH_PULL);
 
   // 初始化定时器用于PWM输出
-  pwm_init(MOTORL_PWM, 5000, 0);
-  pwm_init(MOTORR_PWM, 5000, 0);
+  pwm_init(MOTORL_PWM, 10000, 0);
+  pwm_init(MOTORR_PWM, 10000, 0);
 }
 
 

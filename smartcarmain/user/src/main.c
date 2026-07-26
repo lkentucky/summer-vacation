@@ -48,12 +48,12 @@
 #define IMAGE_PERIOD_MS_DEFAULT   20
 #define IMAGE_PERIOD_MS_MIN       SYS_TICK_MS
 #define IMAGE_PERIOD_MS_MAX       50
-#define IMAGE_STATS_SHOW_FRAMES   20
+#define IMAGE_DISPLAY_SKIP_FRAMES  5
 #define STEER_CENTER_COL      (MT9V03X_W / 2)
 #define STEER_NEAR_ROW_START  60
 #define STEER_NEAR_ROW_END    65
-#define STEER_FAR_ROW_START   60
-#define STEER_FAR_ROW_END     65
+#define STEER_FAR_ROW_START   35
+#define STEER_FAR_ROW_END     40
 #define TRACK_LOST_ROW_START       92
 #define TRACK_LOST_ROW_END         115
 #define TRACK_LOST_COUNT_TH        23
@@ -237,7 +237,7 @@ int main(void) {
     static uint32 last_image_tick = 0;
     static uint32 image_process_start_tick = 0;
     static uint8 step = STEP_IDLE;
-    static uint8 frame_skip = 0;
+    static uint8 image_display_skip = 0;
     static int last_base_speed = 0;
     static uint8 track_lost_frame_count = 0;
     static uint8 track_start_grace_count = 0;
@@ -333,29 +333,32 @@ int main(void) {
       steering_set_image_error(get_mid_error_average(STEER_NEAR_ROW_START, STEER_NEAR_ROW_END),
                                get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END));
       image_proc_ms = (int)image_ticks_to_ms(g_sys_tick - image_process_start_tick);
-      if (++frame_skip >= IMAGE_STATS_SHOW_FRAMES) {
-        frame_skip = 0;
-        ips200_show_string(0, 272, "IMG " );
-        ips200_show_int(32, 272, image_frame_ms, 3);
-        ips200_show_string(58, 272, "ms " );
-        ips200_show_int(82, 272, image_fps, 3);
-        ips200_show_string(108, 272, "fps " );
-        ips200_show_int(142, 272, image_proc_ms, 2);
-        ips200_show_string(160, 272, "ms");
+      if (menu_is_image_page()) {
+        if (++image_display_skip >= IMAGE_DISPLAY_SKIP_FRAMES) {
+          image_display_skip = 0;
+          step = STEP_DISPLAY;
+        } else {
+          step = STEP_IDLE;
+        }
+      } else {
+        image_display_skip = 0;
+        step = STEP_IDLE;
       }
+      break;
+    case STEP_DISPLAY:
+      // 图像菜单顶部保留参数，图像显示在y=100以下；离开菜单后不会再刷新屏幕图像。
+      ips200_show_gray_image(0, 120, base_image[0], MT9V03X_W, MT9V03X_H,
+                             188, 120, threshold);
+      draw_boundary();
+      ips200_show_string(0, 272, "IMG " );
+      ips200_show_int(32, 272, image_frame_ms, 3);
+      ips200_show_string(58, 272, "ms " );
+      ips200_show_int(82, 272, image_fps, 3);
+      ips200_show_string(108, 272, "fps " );
+      ips200_show_int(142, 272, image_proc_ms, 2);
+      ips200_show_string(160, 272, "ms");
       step = STEP_IDLE;
       break;
-    // case STEP_DISPLAY:
-    //   draw_boundary();
-    //   if (++frame_skip >= 10) {
-    //     frame_skip = 0;
-    //     ips200_show_gray_image(0, 100, mt9v03x_image[0], MT9V03X_W, MT9V03X_H,
-    //                            188, 120, threshold);
-    //   }
-    //   printf("%.2f,%d,%.2f,%d\n", real_speedl, (int)target_speedl, real_speedr, (int)target_speedr);
-    //   last_display_tick = g_sys_tick;
-    //   step = STEP_IDLE;
-    //   break;
     }
   }
 }

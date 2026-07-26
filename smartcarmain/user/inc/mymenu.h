@@ -10,6 +10,7 @@ void Init_menu(void);
 void Show_menu(void);
 void Show_array(void);
 void Show_txt(void);
+bool menu_is_image_page(void);
 void key_1(void);
 void key_2(void);
 void key_3(void);

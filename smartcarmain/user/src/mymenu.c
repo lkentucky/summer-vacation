@@ -8,6 +8,7 @@
 
 MenuItem head;
 MenuItem* current_index;
+static MenuItem* image_folder = NULL;
 
 
 bool state = true;
@@ -33,7 +34,7 @@ void Init_menu(void) {
   MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
   MenuItem* motor_folder = dynamic_create_menu_folder(&head, "motor");
   MenuItem* xunxian_folder = dynamic_create_menu_folder(&head, "xunxian");
-  MenuItem* image_folder = dynamic_create_menu_folder(&head, "image");
+  image_folder = dynamic_create_menu_folder(&head, "image");
 
 
 
@@ -48,6 +49,7 @@ void Init_menu(void) {
   dynamic_create_menu_txt(motor_folder, "real_speedr", &real_speedr, float_box);
   dynamic_create_menu_txt(xunxian_folder, "run_speed", &run_base_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "Kp_steer", &Kp_steer, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "Kp_steer_square", &Kp_steer_square, float_box);
   dynamic_create_menu_txt(xunxian_folder, "Kd_steer_position", &Kd_steer_position, float_box);
   dynamic_create_menu_txt(xunxian_folder, "Kd_steer_time", &Kd_steer_time, float_box);
   dynamic_create_menu_txt(xunxian_folder, "Kgyro_steer", &Kgyro_steer, float_box);
@@ -121,6 +123,12 @@ void Show_menu(void) {
   }
   Show_txt();
   Show_array();
+}
+
+bool menu_is_image_page(void) {
+  return image_folder != NULL &&
+         current_index != NULL &&
+         current_index->father == image_folder;
 }
 
 void array_up(void) {
