@@ -89,6 +89,8 @@ static uint32 image_ticks_to_ms(uint32 ticks)
   return ticks * SYS_TICK_MS;
 }
 
+
+/// 根据指定行范围计算中线误差平均值，返回值为中线误差，单位像素
 static int16 get_mid_error_average(uint8 start_row, uint8 end_row)
 {
   int32 sum = 0;
@@ -238,6 +240,7 @@ int main(void) {
     static uint32 image_process_start_tick = 0;
     static uint8 step = STEP_IDLE;
     static uint8 image_display_skip = 0;
+    static uint8 current_threshold = 230;
     static int last_base_speed = 0;
     static uint8 track_lost_frame_count = 0;
     static uint8 track_start_grace_count = 0;
@@ -293,8 +296,8 @@ int main(void) {
       break;
     case STEP_PROCESS:
       memcpy(base_image, mt9v03x_image, sizeof(base_image));
-      uint8 thresholdb = otsu_threshold(base_image);
-      set_image_twovalues(thresholdb);
+      current_threshold = otsu_threshold(base_image);
+      set_image_twovalues(current_threshold);
       find_base_point();
       step = STEP_BOUNDARY;
       break;
@@ -330,7 +333,7 @@ int main(void) {
     //   break;
     case STEP_STEER:
       // 图像处理只负责按固定节拍更新赛道偏差；真正的转向环在TIM6中每2ms计算一次。
-      steering_set_image_error(get_mid_error_average(STEER_NEAR_ROW_START, STEER_NEAR_ROW_END),
+      steering_set_image_error(mid_line_weighted_average()-MT9V03X_W/2,
                                get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END));
       image_proc_ms = (int)image_ticks_to_ms(g_sys_tick - image_process_start_tick);
       if (menu_is_image_page()) {
@@ -348,8 +351,10 @@ int main(void) {
     case STEP_DISPLAY:
       // 图像菜单顶部保留参数，图像显示在y=100以下；离开菜单后不会再刷新屏幕图像。
       ips200_show_gray_image(0, 120, base_image[0], MT9V03X_W, MT9V03X_H,
-                             188, 120, thresholdb);
+                             188, 120, current_threshold);
       draw_boundary();
+      ips200_show_string(0, 256, "MID " );
+      ips200_show_int(32, 256, (int)mid_line_weighted_average(), 3);
       ips200_show_string(0, 272, "IMG " );
       ips200_show_int(32, 272, image_frame_ms, 3);
       ips200_show_string(58, 272, "ms " );

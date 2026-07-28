@@ -43,5 +43,6 @@ uint8 otsu_threshold(uint8 image[][MT9V03X_W]);//大津法求阈值
 void find_boundary(void);
 void draw_boundary(void);
 void ring_state_process(void);
+uint8 mid_line_weighted_average(void);  // 根据中线数组计算加权平均值，返回值为中线位置，单位像素
 
 #endif  

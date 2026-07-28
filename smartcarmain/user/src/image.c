@@ -336,19 +336,25 @@ uint8 mid_weight_list[MT9V03X_H] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
+uint8 mid_line_last = MT9V03X_W / 2;  // 上一帧中线位置，初始为图像中间                                    
+
 //根据权重求最终中线
-void mid_line_weighted_average(void)
+uint8 mid_line_weighted_average(void)
 {
     uint32 sum = 0;
     uint32 weight_sum = 0;
+    uint8 mid_line_thistime = MT9V03X_W / 2;
+    uint8 mid_line_final = MT9V03X_W / 2; 
 
     for (uint16 i = search_end_line; i < MT9V03X_H; i++)
     {
         sum += mid_line[i] * mid_weight_list[i];
         weight_sum += mid_weight_list[i];
     }
-    
-    
+    mid_line_thistime = (uint8)(sum / weight_sum);
+    mid_line_final = (uint8)(mid_line_last * 0.2f + mid_line_thistime * 0.8f);
+    mid_line_last = mid_line_thistime;
+    return mid_line_final;
 }
 
 
