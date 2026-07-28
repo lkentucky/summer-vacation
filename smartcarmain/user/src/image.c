@@ -336,7 +336,20 @@ uint8 mid_weight_list[MT9V03X_H] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
+//根据权重求最终中线
+void mid_line_weighted_average(void)
+{
+    uint32 sum = 0;
+    uint32 weight_sum = 0;
 
+    for (uint16 i = search_end_line; i < MT9V03X_H; i++)
+    {
+        sum += mid_line[i] * mid_weight_list[i];
+        weight_sum += mid_weight_list[i];
+    }
+    
+    
+}
 
 
 

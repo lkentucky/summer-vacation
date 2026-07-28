@@ -293,8 +293,8 @@ int main(void) {
       break;
     case STEP_PROCESS:
       memcpy(base_image, mt9v03x_image, sizeof(base_image));
-      //uint8 thresholdb = otsu_threshold(base_image);
-      set_image_twovalues(threshold);
+      uint8 thresholdb = otsu_threshold(base_image);
+      set_image_twovalues(thresholdb);
       find_base_point();
       step = STEP_BOUNDARY;
       break;
@@ -348,7 +348,7 @@ int main(void) {
     case STEP_DISPLAY:
       // 图像菜单顶部保留参数，图像显示在y=100以下；离开菜单后不会再刷新屏幕图像。
       ips200_show_gray_image(0, 120, base_image[0], MT9V03X_W, MT9V03X_H,
-                             188, 120, threshold);
+                             188, 120, thresholdb);
       draw_boundary();
       ips200_show_string(0, 272, "IMG " );
       ips200_show_int(32, 272, image_frame_ms, 3);
