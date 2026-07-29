@@ -258,7 +258,12 @@ int main(void) {
     }
 
     if (base_speed > 0) {
+#if SPEED_DECISION_ENABLE
+      // 启用后使用速度决策输出；总开关为0时仍保持原来的固定巡线速度。
+      base_speed = speed_decision_speed;
+#else
       base_speed = run_base_speed;  // 运行中允许通过菜单实时调整巡线速度
+#endif
     }
 
     if (base_speed > 0 && last_base_speed <= 0) {
@@ -335,6 +340,9 @@ int main(void) {
       // 图像处理只负责按固定节拍更新赛道偏差；真正的转向环在TIM6中每2ms计算一次。
       steering_set_image_error(mid_line_weighted_average()-MT9V03X_W/2,
                                get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END));
+#if SPEED_DECISION_ENABLE
+      speed_decision_update();  // 每个新图像帧更新一次弯道强度和目标速度
+#endif
       image_proc_ms = (int)image_ticks_to_ms(g_sys_tick - image_process_start_tick);
       if (menu_is_image_page()) {
         if (++image_display_skip >= IMAGE_DISPLAY_SKIP_FRAMES) {

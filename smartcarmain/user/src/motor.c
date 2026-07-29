@@ -19,10 +19,10 @@ float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
-int run_base_speed = 230; // 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed
-float Kp_steer = 4.17f;     // 方向P系数
-float Kp_steer_square = 0.20f;     // 平方项P系数
-float Kd_steer_position = 0.0f;     // 方向D系数
+int run_base_speed = 230; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
+float Kp_steer = 4.83f;     //4.93// 方向P系数
+float Kp_steer_square = 0.23f;     // 平方项P系数
+float Kd_steer_position = 0.0f;    //0.09 // 方向D系数
 float Kd_steer_time = 0.01f;     // 方向D系数
 
 static volatile int16 steer_error_near = 0;  // 图像处理输出的近处偏差，由主循环按帧更新
@@ -36,6 +36,169 @@ static float motor_limit_float(float value, float min_value, float max_value)
   if (value < min_value) return min_value;
   return value;
 }
+
+#if SPEED_DECISION_ENABLE
+/*
+ * 速度决策草案（当前由SPEED_DECISION_ENABLE=0禁用）
+ *
+ * 设计目标：
+ * 1. 远近点差值提前识别入弯；
+ * 2. 中线偏差大时禁止高速；
+ * 3. IMU角速度确认车辆仍处于弯道； 
+ * 4. 入弯快速减速，出弯连续确认后缓慢加速。
+ *
+ * 调试顺序：
+ * 先令straight/corner/extreme全部等于当前安全速度，确认curve_score合理，
+ * 然后每次只提高straight_speed，不要先提高corner_speed。
+ */
+
+#define SPEED_ERROR_STRAIGHT_PX       (4.0f)
+#define SPEED_ERROR_FULL_CURVE_PX     (28.0f)
+#define SPEED_PREVIEW_STRAIGHT_PX     (3.0f)
+#define SPEED_PREVIEW_FULL_CURVE_PX   (20.0f)
+#define SPEED_GYRO_STRAIGHT_DPS       (15.0f)
+#define SPEED_GYRO_FULL_CURVE_DPS     (100.0f)
+#define SPEED_STRAIGHT_SCORE_MAX      (0.18f)
+#define SPEED_NORMAL_CORNER_SCORE     (0.70f)
+
+int speed_straight_speed = 300;
+int speed_corner_speed = 230;
+int speed_extreme_corner_speed = 200;
+float speed_curve_score = 1.0f;
+int speed_decision_speed = 230;
+float speed_accel_step = 4.5f;
+float speed_decel_step = 12.0f;
+int speed_straight_confirm_frames = 2;
+
+static int speed_straight_frame_count = 0;
+static float speed_command = 230.0f;
+
+static float speed_abs_float(float value)
+{
+  return (value < 0.0f) ? -value : value;
+}
+
+static float speed_max_float(float value_a, float value_b)
+{
+  return (value_a > value_b) ? value_a : value_b;
+}
+
+static float speed_normalize_score(float value, float straight_value, float full_curve_value)
+{
+  if (value <= straight_value) return 0.0f;
+  if (value >= full_curve_value) return 1.0f;
+  if (full_curve_value <= straight_value) return 1.0f;
+  return (value - straight_value) / (full_curve_value - straight_value);
+}
+
+void speed_decision_reset(void)
+{
+  int reset_speed = speed_corner_speed;
+  if (reset_speed < 0) reset_speed = 0;
+
+  speed_straight_frame_count = 0;
+  speed_curve_score = 1.0f;
+  speed_command = (float)reset_speed;
+  speed_decision_speed = reset_speed;
+}
+
+void speed_decision_update(void)
+{
+  int16 error_near;
+  int16 error_far;
+  float line_error;
+  float preview_error;
+  float gyro_z;
+  float line_score;
+  float preview_score;
+  float gyro_score;
+  float target_speed;
+  int straight_speed;
+  int corner_speed;
+  int extreme_speed;
+
+  if (base_speed <= 0)
+  {
+    speed_decision_reset();
+    return;
+  }
+
+  error_near = steer_error_near;
+  error_far = steer_error_far;
+  line_error = speed_max_float(speed_abs_float((float)error_near),
+                               speed_abs_float((float)error_far));
+  preview_error = speed_abs_float((float)(error_far - error_near));
+  gyro_z = speed_abs_float(imu_gyro_z_dps_filter);
+
+  line_score = speed_normalize_score(line_error,
+                                     SPEED_ERROR_STRAIGHT_PX,
+                                     SPEED_ERROR_FULL_CURVE_PX);
+  preview_score = speed_normalize_score(preview_error,
+                                        SPEED_PREVIEW_STRAIGHT_PX,
+                                        SPEED_PREVIEW_FULL_CURVE_PX);
+  gyro_score = speed_normalize_score(gyro_z,
+                                     SPEED_GYRO_STRAIGHT_DPS,
+                                     SPEED_GYRO_FULL_CURVE_DPS);
+
+  speed_curve_score = speed_max_float(line_score,
+                                      speed_max_float(preview_score, gyro_score));
+  speed_curve_score = motor_limit_float(speed_curve_score, 0.0f, 1.0f);
+
+  straight_speed = speed_straight_speed;
+  corner_speed = speed_corner_speed;
+  extreme_speed = speed_extreme_corner_speed;
+  if (straight_speed < 0) straight_speed = 0;
+  if (corner_speed > straight_speed) corner_speed = straight_speed;
+  if (corner_speed < 0) corner_speed = 0;
+  if (extreme_speed > corner_speed) extreme_speed = corner_speed;
+  if (extreme_speed < 0) extreme_speed = 0;
+
+  if (speed_curve_score <= SPEED_NORMAL_CORNER_SCORE)
+  {
+    float ratio = speed_curve_score / SPEED_NORMAL_CORNER_SCORE;
+    target_speed = (float)straight_speed +
+                   ((float)corner_speed - (float)straight_speed) * ratio;
+  }
+  else
+  {
+    float ratio = (speed_curve_score - SPEED_NORMAL_CORNER_SCORE) /
+                  (1.0f - SPEED_NORMAL_CORNER_SCORE);
+    target_speed = (float)corner_speed +
+                   ((float)extreme_speed - (float)corner_speed) * ratio;
+  }
+
+  if (speed_curve_score <= SPEED_STRAIGHT_SCORE_MAX)
+  {
+    if (speed_straight_frame_count < speed_straight_confirm_frames)
+      speed_straight_frame_count++;
+  }
+  else
+  {
+    speed_straight_frame_count = 0;
+  }
+
+  // 没有连续确认直道时，速度不得高于已验证安全的弯道速度。
+  if (speed_straight_frame_count < speed_straight_confirm_frames &&
+      target_speed > (float)corner_speed)
+  {
+    target_speed = (float)corner_speed;
+  }
+
+  // 快减慢加：入弯优先保证安全，出弯再逐步释放直道速度。
+  if (target_speed < speed_command)
+  {
+    speed_command -= speed_decel_step;
+    if (speed_command < target_speed) speed_command = target_speed;
+  }
+  else if (target_speed > speed_command)
+  {
+    speed_command += speed_accel_step;
+    if (speed_command > target_speed) speed_command = target_speed;
+  }
+
+  speed_decision_speed = (int)(speed_command + 0.5f);
+}
+#endif
 
 void steering_set_image_error(int16 error_near, int16 error_far)
 {
@@ -154,6 +317,9 @@ void motor_pid_reset(void)
     control_effortl = control_effortr = 0;
     steer_last_error = 0;
     steer_last_output = 0.0f;
+#if SPEED_DECISION_ENABLE
+    speed_decision_reset();
+#endif
 }
 
 //pid闭环控制电机转速
