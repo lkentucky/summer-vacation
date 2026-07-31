@@ -65,6 +65,7 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "spd_up", &speed_accel_step, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_down", &speed_decel_step, float_box);
   dynamic_create_menu_txt(xunxian_folder, "straight_n", &speed_straight_confirm_frames, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "corner_n", &speed_corner_confirm_frames, int32_box);
 #endif
   dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "frame_ms", &image_frame_ms, int32_box);

@@ -46,6 +46,7 @@ extern int speed_decision_speed;          // 经过直道确认和加减速限�
 extern float speed_accel_step;            // 每个图像帧允许增加的最大速度，单位cm/s
 extern float speed_decel_step;            // 每个图像帧允许减少的最大速度，单位cm/s
 extern int speed_straight_confirm_frames; // 弯道状态下连续多少帧满足直道条件才切回直道
+extern int speed_corner_confirm_frames;   // 直道状态下连续多少帧满足弯道条件才切入弯道
 
 // 使用最新图像误差更新直道/弯道状态、Kgyro系数及速度指令，每个图像帧调用一次。
 void speed_decision_update(void);

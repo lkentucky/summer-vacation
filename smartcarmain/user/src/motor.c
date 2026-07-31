@@ -42,7 +42,7 @@ static float motor_limit_float(float value, float min_value, float max_value)
  * 二状态速度决策（SPEED_DECISION_ENABLE=1启用，=0时不参与编译）
  *
  * STRAIGHT直道状态：
- *   图像中线偏差达到入弯阈值，立即切换到CORNER。
+ *   图像中线偏差连续达到入弯阈值，才切换到CORNER。
  * CORNER弯道状态：
  *   图像中线偏差低于出弯阈值，并连续满足指定帧数，才切回STRAIGHT。
  * 入弯阈值大于出弯阈值形成滞回，避免状态在临界值附近反复跳变。
@@ -72,9 +72,13 @@ float speed_accel_step = 4.0f;
 float speed_decel_step = 12.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
 int speed_straight_confirm_frames = 4;
+// 在直道状态下，连续满足多少帧入弯条件后才切换到弯道。
+int speed_corner_confirm_frames = 2;
 
 // 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
+// 直道状态下已经连续满足入弯条件的帧数，仅在本文件内部使用。
+static int speed_corner_frame_count = 0;
 // 带加减速斜率限制的浮点速度指令，保留小数以避免每帧取整误差，单位：cm/s。
 static float speed_command = 230.0f;
 
@@ -92,6 +96,7 @@ void speed_decision_reset(void)
 
   speed_state = SPEED_STATE_CORNER;       // 起步先按弯道处理，防止未知路况直接高速。
   speed_straight_frame_count = 0;         // 清除之前累计的直道帧。
+  speed_corner_frame_count = 0;           // 清除之前累计的弯道帧。
   Kgyro_steer = SPEED_CORNER_KGYRO_STEER; // 停车和起步阶段使用弯道抑制系数。
   speed_command = (float)reset_speed;     // 浮点指令回到弯道安全速度。
   speed_decision_speed = reset_speed;     // 对外整数指令同步复位。
@@ -132,16 +137,27 @@ void speed_decision_update(void)
 
   if (speed_state == SPEED_STATE_STRAIGHT)
   {
-    // 直道状态：图像中线偏差达到阈值，立即切换到弯道。
+    // 直道状态：偏差连续达到阈值才切换到弯道，过滤出弯后的单帧抖动。
     if (line_error >= SPEED_ENTER_LINE_PX)
     {
-      speed_state = SPEED_STATE_CORNER;
-      speed_straight_frame_count = 0;
+      speed_corner_frame_count++;
+      if (speed_corner_confirm_frames <= 0 ||
+          speed_corner_frame_count >= speed_corner_confirm_frames)
+      {
+        speed_state = SPEED_STATE_CORNER;
+        speed_corner_frame_count = 0;
+        speed_straight_frame_count = 0;
+      }
+    }
+    else
+    {
+      speed_corner_frame_count = 0;
     }
   }
   else
   {
     // 弯道状态：图像中线偏差足够小，才累计直道确认帧。
+    speed_corner_frame_count = 0;
     if (line_error <= SPEED_EXIT_LINE_PX)
     {
       speed_straight_frame_count++;
