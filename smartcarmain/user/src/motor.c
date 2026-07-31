@@ -20,8 +20,8 @@ float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
 int run_base_speed = 230; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
-float Kp_steer = 4.83f;     //4.93// 方向P系数
-float Kp_steer_square = 0.23f;     // 平方项P系数
+float Kp_steer = 5.44f;     //4.93// 方向P系数
+float Kp_steer_square = 0.30f;     // 平方项P系数
 float Kd_steer_position = 0.0f;    //0.09 // 方向D系数
 float Kd_steer_time = 0.01f;     // 方向D系数
 
@@ -39,163 +39,138 @@ static float motor_limit_float(float value, float min_value, float max_value)
 
 #if SPEED_DECISION_ENABLE
 /*
- * 速度决策草案（当前由SPEED_DECISION_ENABLE=0禁用）
+ * 二状态速度决策（SPEED_DECISION_ENABLE=1启用，=0时不参与编译）
  *
- * 设计目标：
- * 1. 远近点差值提前识别入弯；
- * 2. 中线偏差大时禁止高速；
- * 3. IMU角速度确认车辆仍处于弯道； 
- * 4. 入弯快速减速，出弯连续确认后缓慢加速。
- *
- * 调试顺序：
- * 先令straight/corner/extreme全部等于当前安全速度，确认curve_score合理，
- * 然后每次只提高straight_speed，不要先提高corner_speed。
+ * STRAIGHT直道状态：
+ *   图像中线偏差达到入弯阈值，立即切换到CORNER。
+ * CORNER弯道状态：
+ *   图像中线偏差低于出弯阈值，并连续满足指定帧数，才切回STRAIGHT。
+ * 入弯阈值大于出弯阈值形成滞回，避免状态在临界值附近反复跳变。
  */
 
-#define SPEED_ERROR_STRAIGHT_PX       (4.0f)
-#define SPEED_ERROR_FULL_CURVE_PX     (28.0f)
-#define SPEED_PREVIEW_STRAIGHT_PX     (3.0f)
-#define SPEED_PREVIEW_FULL_CURVE_PX   (20.0f)
-#define SPEED_GYRO_STRAIGHT_DPS       (15.0f)
-#define SPEED_GYRO_FULL_CURVE_DPS     (100.0f)
-#define SPEED_STRAIGHT_SCORE_MAX      (0.18f)
-#define SPEED_NORMAL_CORNER_SCORE     (0.70f)
+// 直道状态下，最大中线偏差达到该值就判定入弯，单位：像素。
+#define SPEED_ENTER_LINE_PX           (18.0f)
+// 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
+#define SPEED_EXIT_LINE_PX            (5.0f)
 
-int speed_straight_speed = 300;
+// 直道状态的目标速度，单位：cm/s。
+int speed_straight_speed = 250;
+// 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
 int speed_corner_speed = 230;
-int speed_extreme_corner_speed = 200;
-float speed_curve_score = 1.0f;
+// 当前速度状态；0是直道，1是弯道，复位时默认按更安全的弯道处理。
+int speed_state = SPEED_STATE_CORNER;
+// 最终提供给base_speed的整数速度指令，单位：cm/s。
 int speed_decision_speed = 230;
-float speed_accel_step = 4.5f;
+// 每处理一个图像帧，速度最多增加多少，单位：cm/s/帧。
+float speed_accel_step = 4.0f;
+// 每处理一个图像帧，速度最多降低多少，单位：cm/s/帧。
 float speed_decel_step = 12.0f;
+// 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
 int speed_straight_confirm_frames = 2;
 
+// 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
+// 带加减速斜率限制的浮点速度指令，保留小数以避免每帧取整误差，单位：cm/s。
 static float speed_command = 230.0f;
 
+// 返回浮点数绝对值，使左右弯使用同一组判断阈值。
 static float speed_abs_float(float value)
 {
   return (value < 0.0f) ? -value : value;
 }
 
-static float speed_max_float(float value_a, float value_b)
-{
-  return (value_a > value_b) ? value_a : value_b;
-}
-
-static float speed_normalize_score(float value, float straight_value, float full_curve_value)
-{
-  if (value <= straight_value) return 0.0f;
-  if (value >= full_curve_value) return 1.0f;
-  if (full_curve_value <= straight_value) return 1.0f;
-  return (value - straight_value) / (full_curve_value - straight_value);
-}
-
+// 停车或控制器复位时，清除直道确认并恢复到弯道安全状态。
 void speed_decision_reset(void)
 {
-  int reset_speed = speed_corner_speed;
+  int reset_speed = speed_corner_speed; // 本次使用的复位速度，单位：cm/s。
   if (reset_speed < 0) reset_speed = 0;
 
-  speed_straight_frame_count = 0;
-  speed_curve_score = 1.0f;
-  speed_command = (float)reset_speed;
-  speed_decision_speed = reset_speed;
+  speed_state = SPEED_STATE_CORNER;       // 起步先按弯道处理，防止未知路况直接高速。
+  speed_straight_frame_count = 0;         // 清除之前累计的直道帧。
+  speed_command = (float)reset_speed;     // 浮点指令回到弯道安全速度。
+  speed_decision_speed = reset_speed;     // 对外整数指令同步复位。
 }
 
+// 每个新图像帧调用一次：更新状态机，再用快减慢加生成最终速度指令。
 void speed_decision_update(void)
 {
-  int16 error_near;
-  int16 error_far;
-  float line_error;
-  float preview_error;
-  float gyro_z;
-  float line_score;
-  float preview_score;
-  float gyro_score;
-  float target_speed;
-  int straight_speed;
-  int corner_speed;
-  int extreme_speed;
+  int16 error_near;       // 近处中线相对图像中心的有符号偏差，单位：像素。
+  int16 error_far;        // 远处中线相对图像中心的有符号偏差，单位：像素。
+  float line_error;       // 远近偏差绝对值中的较大者，单位：像素。
+  float target_speed;     // 当前状态对应的目标速度，单位：cm/s。
+  float accel_step;       // 检查为非负数后的本帧加速步长，单位：cm/s。
+  float decel_step;       // 检查为非负数后的本帧减速步长，单位：cm/s。
+  int straight_speed;     // 检查为非负数后的直道速度，单位：cm/s。
+  int corner_speed;       // 检查范围后的弯道速度，单位：cm/s。
 
+  // 停车时不累计状态，下一次起步仍从弯道安全速度开始。
   if (base_speed <= 0)
   {
     speed_decision_reset();
     return;
   }
 
+  // 读取本帧远近图像偏差，使用绝对值较大的一项判断弯道。
   error_near = steer_error_near;
   error_far = steer_error_far;
-  line_error = speed_max_float(speed_abs_float((float)error_near),
-                               speed_abs_float((float)error_far));
-  preview_error = speed_abs_float((float)(error_far - error_near));
-  gyro_z = speed_abs_float(imu_gyro_z_dps_filter);
+  line_error = speed_abs_float((float)error_near);
+  if (speed_abs_float((float)error_far) > line_error)
+    line_error = speed_abs_float((float)error_far);
 
-  line_score = speed_normalize_score(line_error,
-                                     SPEED_ERROR_STRAIGHT_PX,
-                                     SPEED_ERROR_FULL_CURVE_PX);
-  preview_score = speed_normalize_score(preview_error,
-                                        SPEED_PREVIEW_STRAIGHT_PX,
-                                        SPEED_PREVIEW_FULL_CURVE_PX);
-  gyro_score = speed_normalize_score(gyro_z,
-                                     SPEED_GYRO_STRAIGHT_DPS,
-                                     SPEED_GYRO_FULL_CURVE_DPS);
-
-  speed_curve_score = speed_max_float(line_score,
-                                      speed_max_float(preview_score, gyro_score));
-  speed_curve_score = motor_limit_float(speed_curve_score, 0.0f, 1.0f);
-
+  // 约束菜单速度参数，保证：直道速度 >= 弯道速度 >= 0。
   straight_speed = speed_straight_speed;
   corner_speed = speed_corner_speed;
-  extreme_speed = speed_extreme_corner_speed;
   if (straight_speed < 0) straight_speed = 0;
   if (corner_speed > straight_speed) corner_speed = straight_speed;
   if (corner_speed < 0) corner_speed = 0;
-  if (extreme_speed > corner_speed) extreme_speed = corner_speed;
-  if (extreme_speed < 0) extreme_speed = 0;
 
-  if (speed_curve_score <= SPEED_NORMAL_CORNER_SCORE)
+  if (speed_state == SPEED_STATE_STRAIGHT)
   {
-    float ratio = speed_curve_score / SPEED_NORMAL_CORNER_SCORE;
-    target_speed = (float)straight_speed +
-                   ((float)corner_speed - (float)straight_speed) * ratio;
+    // 直道状态：图像中线偏差达到阈值，立即切换到弯道。
+    if (line_error >= SPEED_ENTER_LINE_PX)
+    {
+      speed_state = SPEED_STATE_CORNER;
+      speed_straight_frame_count = 0;
+    }
   }
   else
   {
-    float ratio = (speed_curve_score - SPEED_NORMAL_CORNER_SCORE) /
-                  (1.0f - SPEED_NORMAL_CORNER_SCORE);
-    target_speed = (float)corner_speed +
-                   ((float)extreme_speed - (float)corner_speed) * ratio;
-  }
-
-  if (speed_curve_score <= SPEED_STRAIGHT_SCORE_MAX)
-  {
-    if (speed_straight_frame_count < speed_straight_confirm_frames)
+    // 弯道状态：图像中线偏差足够小，才累计直道确认帧。
+    if (line_error <= SPEED_EXIT_LINE_PX)
+    {
       speed_straight_frame_count++;
-  }
-  else
-  {
-    speed_straight_frame_count = 0;
+      if (speed_straight_confirm_frames <= 0 ||
+          speed_straight_frame_count >= speed_straight_confirm_frames)
+      {
+        speed_state = SPEED_STATE_STRAIGHT;
+        speed_straight_frame_count = 0;
+      }
+    }
+    else
+    {
+      speed_straight_frame_count = 0;
+    }
   }
 
-  // 没有连续确认直道时，速度不得高于已验证安全的弯道速度。
-  if (speed_straight_frame_count < speed_straight_confirm_frames &&
-      target_speed > (float)corner_speed)
-  {
-    target_speed = (float)corner_speed;
-  }
+  // 状态只选择两档目标速度，不再计算curve_score或做速度插值。
+  target_speed = (speed_state == SPEED_STATE_STRAIGHT) ?
+                 (float)straight_speed : (float)corner_speed;
+  accel_step = (speed_accel_step > 0.0f) ? speed_accel_step : 0.0f;
+  decel_step = (speed_decel_step > 0.0f) ? speed_decel_step : 0.0f;
 
-  // 快减慢加：入弯优先保证安全，出弯再逐步释放直道速度。
+  // 快减慢加：入弯快速回到安全速度，确认出弯后再平缓提速。
   if (target_speed < speed_command)
   {
-    speed_command -= speed_decel_step;
+    speed_command -= decel_step;
     if (speed_command < target_speed) speed_command = target_speed;
   }
   else if (target_speed > speed_command)
   {
-    speed_command += speed_accel_step;
+    speed_command += accel_step;
     if (speed_command > target_speed) speed_command = target_speed;
   }
 
+  // 正速度加0.5后取整，得到交给现有电机控制代码的整数速度。
   speed_decision_speed = (int)(speed_command + 0.5f);
 }
 #endif

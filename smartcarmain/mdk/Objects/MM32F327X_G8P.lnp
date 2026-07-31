@@ -6,6 +6,7 @@
 ".\objects\key.o"
 ".\objects\motor.o"
 ".\objects\image.o"
+".\objects\cross.o"
 ".\objects\calculation.o"
 ".\objects\imu.o"
 ".\objects\zf_common_clock.o"

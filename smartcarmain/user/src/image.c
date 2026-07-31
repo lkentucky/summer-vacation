@@ -5,7 +5,7 @@ uint8 base_image[MT9V03X_H][MT9V03X_W];
 uint8 twovalues_image[MT9V03X_H][MT9V03X_W];
 uint8 base_point_left;
 uint8 base_point_right;
-uint8 search_end_line=30;  // 搜索赛道边界的终止行数
+uint8 search_end_line=20;  // 搜索赛道边界的终止行数
 uint8 left_search_right_range=10;  // 左边界向右搜索范围
 uint8 left_search_left_range=10;   // 左边界向左搜索范围
 uint8 right_search_left_range=10;  // 右边界向左搜索范围
@@ -197,7 +197,7 @@ void find_boundary(void)
              }
              if(j+2==MT9V03X_W-1)  // 如果搜索到图像最右边还没找到左边界点，则将左边界点设置为图像最右边-2
              {
-                 left_point=MT9V03X_W-3;
+                 flag_leftpoint_mid_search=1;
                  break;
              }
              if(j==left_point+left_search_right_range-1)  // 如果搜索到左边界搜索范围的最右边还没找到左边界点，则将左边界点设置为搜索范围的最右边
@@ -215,14 +215,12 @@ void find_boundary(void)
                         left_point=j;
                         break;
                     }
-                    if(j==2)  // 如果搜索到图像最左边还没找到左边界点，则将左边界点设置为图像最左边+2
-                    {
-                        left_point=2;
-                        break;
-                    }
-                    if(j==left_point-left_search_left_range+1)  // 如果搜索到左边界向右搜索范围的最左边还没找到左边界点，则向右5个像素点搜索左边界
+                    
+                    
+                    if(j==left_point-left_search_left_range+1||j==2)  // 如果搜索到左边界向右搜索范围的最左边还没找到左边界点，则向右5个像素点搜索左边界
                     {
                         flag_leftpoint_mid_search=1;  // 标记左边界点搜索范围的最左边还没找到左边界点
+                        break;
                     }
                 }
             }
@@ -253,7 +251,7 @@ void find_boundary(void)
              }
              if(j==2)  // 如果搜索到图像最左边还没找到右边界点，则将右边界点设置为图像最左边+2
              {
-                 right_point=2;
+                 flag_rightpoint_mid_search=1;
                  break;
              }
              if(j==right_point-right_search_left_range+1)  // 如果搜索到右边界向左搜索范围的最左边还没找到右边界点，则向右5个像素点搜索右边界
@@ -271,14 +269,12 @@ void find_boundary(void)
                         right_point=j;
                         break;
                     }
-                    if(j+2==MT9V03X_W-1)  // 如果搜索到图像最右边还没找到右边界点，则将右边界点设置为图像最右边-2
-                    {
-                        right_point=MT9V03X_W-3;
-                        break;
-                    }
-                    if(j==right_point+right_search_right_range-1)  // 如果搜索到右边界向右搜索范围的最右边还没找到右边界点，则由中间向右搜索右边界
+                   
+                    
+                    if(j==right_point+right_search_right_range-1||j+2==MT9V03X_W-1)  // 如果搜索到右边界向右搜索范围的最右边还没找到右边界点，则由中间向右搜索右边界
                     {
                         flag_rightpoint_mid_search=1;  // 标记右边界点搜索范围的最右边还没找到右边界点
+                        break;
                     }
                 }
             }
@@ -323,13 +319,13 @@ void draw_boundary(void)
 //权重越靠上，转弯越早
 uint8 mid_weight_list[MT9V03X_H] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                    5, 5, 5, 5, 5, 5, 5, 5, 5, 6,
-                                    7, 8, 9, 10, 10, 10, 10, 10, 10, 11,
+                                    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                                    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
                                     12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
 
                                     20, 19, 18, 17, 16, 15, 14, 13, 12, 11,
                                     10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+                                   
                                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

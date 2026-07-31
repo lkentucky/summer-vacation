@@ -37,6 +37,7 @@
 #include "zf_common_headfile.h"
 #include "isr.h"
 #include "image.h"
+#include "cross.h"
 #include "IMU.h"
 #include <string.h>
 #include <stdbool.h>
@@ -49,6 +50,8 @@
 #define IMAGE_PERIOD_MS_MIN       SYS_TICK_MS
 #define IMAGE_PERIOD_MS_MAX       50
 #define IMAGE_DISPLAY_SKIP_FRAMES  5
+#define IMAGE_MENU_CROSS_VALUE_X   150       // 图像菜单中cross数值的横坐标
+#define IMAGE_MENU_CROSS_VALUE_Y   (5 * 16)  // cross是图像菜单第6项，对应第5行
 #define STEER_CENTER_COL      (MT9V03X_W / 2)
 #define STEER_NEAR_ROW_START  60
 #define STEER_NEAR_ROW_END    65
@@ -270,6 +273,10 @@ int main(void) {
       track_start_grace_count = TRACK_START_GRACE_FRAMES;
       track_lost_frame_count = 0;
       ips200_show_string(0, 288, "RUNNING          ");
+    } else if (base_speed <= 0 && last_base_speed > 0) {
+      track_start_grace_count = 0;
+      track_lost_frame_count = 0;
+      cross_state_reset();
     } else if (base_speed <= 0) {
       track_start_grace_count = 0;
       track_lost_frame_count = 0;
@@ -308,6 +315,13 @@ int main(void) {
       break;
     case STEP_BOUNDARY:
       find_boundary();
+      cross_state_process();  // 普通边线搜索后执行十字检测与补线
+      if (menu_is_image_page()) {
+        // 菜单整体只在按键动作时重画，这里单独实时刷新cross状态，
+        // 否则短暂的exit_confirm状态会被屏幕上的旧数值掩盖。
+        ips200_show_int(IMAGE_MENU_CROSS_VALUE_X, IMAGE_MENU_CROSS_VALUE_Y,
+                        cross_state, 3);
+      }
       if (base_speed > 0) {
         if (track_start_grace_count > 0) {
           track_start_grace_count--;
@@ -341,7 +355,7 @@ int main(void) {
       steering_set_image_error(mid_line_weighted_average()-MT9V03X_W/2,
                                get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END));
 #if SPEED_DECISION_ENABLE
-      speed_decision_update();  // 每个新图像帧更新一次弯道强度和目标速度
+      speed_decision_update();  // 每个新图像帧更新一次直道/弯道状态和目标速度
 #endif
       image_proc_ms = (int)image_ticks_to_ms(g_sys_tick - image_process_start_tick);
       if (menu_is_image_page()) {

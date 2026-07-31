@@ -5,6 +5,7 @@
 #include "zf_driver_pit.h"
 #include "motor.h"
 #include "IMU.h"
+#include "cross.h"
 
 MenuItem head;
 MenuItem* current_index;
@@ -55,12 +56,11 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "Kgyro_steer", &Kgyro_steer, float_box);
   dynamic_create_menu_txt(xunxian_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
 #if SPEED_DECISION_ENABLE
-  // 速度决策草案菜单；总开关为0时这些项目不会出现。
+  // 二状态速度决策菜单：spd_state中0=直道，1=弯道。
   dynamic_create_menu_txt(xunxian_folder, "spd_straight", &speed_straight_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "spd_extreme", &speed_extreme_corner_speed, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "spd_state", &speed_state, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_cmd", &speed_decision_speed, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "curve", &speed_curve_score, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_up", &speed_accel_step, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_down", &speed_decel_step, float_box);
   dynamic_create_menu_txt(xunxian_folder, "straight_n", &speed_straight_confirm_frames, int32_box);
@@ -70,6 +70,7 @@ void Init_menu(void) {
   dynamic_create_menu_txt(image_folder, "proc_ms", &image_proc_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "fps", &image_fps, int32_box);
   dynamic_create_menu_txt(image_folder, "wait", &image_wait_count, int32_box);
+  dynamic_create_menu_txt(image_folder, "cross", &cross_state, uint8_box);
   dynamic_create_menu_txt(&head, "threshold", &threshold, uint8_box);
 
   current_index = head.first_son;

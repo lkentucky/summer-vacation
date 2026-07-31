@@ -417,6 +417,11 @@
               <FilePath>..\user\src\image.c</FilePath>
             </File>
             <File>
+              <FileName>cross.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\src\cross.c</FilePath>
+            </File>
+            <File>
               <FileName>calculation.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\user\src\calculation.c</FilePath>
@@ -440,6 +445,11 @@
               <FileName>IMU.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\user\inc\IMU.h</FilePath>
+            </File>
+            <File>
+              <FileName>cross.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\user\inc\cross.h</FilePath>
             </File>
           </Files>
         </Group>
