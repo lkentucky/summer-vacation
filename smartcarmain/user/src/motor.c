@@ -79,6 +79,10 @@ int speed_corner_confirm_frames = 2;
 static int speed_straight_frame_count = 0;
 // 直道状态下已经连续满足入弯条件的帧数，仅在本文件内部使用。
 static int speed_corner_frame_count = 0;
+// 已进入出弯确认阶段时置1；此时速度仍按弯道值，但方向抑制提前使用直道值。
+static int speed_exit_assist_active = 0;
+// 出弯助稳期间，偏差连续重新达到入弯阈值的帧数，用于确认是否撤销助稳。
+static int speed_exit_cancel_frame_count = 0;
 // 带加减速斜率限制的浮点速度指令，保留小数以避免每帧取整误差，单位：cm/s。
 static float speed_command = 230.0f;
 
@@ -97,6 +101,8 @@ void speed_decision_reset(void)
   speed_state = SPEED_STATE_CORNER;       // 起步先按弯道处理，防止未知路况直接高速。
   speed_straight_frame_count = 0;         // 清除之前累计的直道帧。
   speed_corner_frame_count = 0;           // 清除之前累计的弯道帧。
+  speed_exit_assist_active = 0;           // 清除出弯助稳标志。
+  speed_exit_cancel_frame_count = 0;      // 清除助稳撤销确认帧数。
   Kgyro_steer = SPEED_CORNER_KGYRO_STEER; // 停车和起步阶段使用弯道抑制系数。
   speed_command = (float)reset_speed;     // 浮点指令回到弯道安全速度。
   speed_decision_speed = reset_speed;     // 对外整数指令同步复位。
@@ -137,6 +143,8 @@ void speed_decision_update(void)
 
   if (speed_state == SPEED_STATE_STRAIGHT)
   {
+    speed_exit_assist_active = 0;      // 已确认直道，不再需要出弯助稳。
+    speed_exit_cancel_frame_count = 0; // 直道状态不累计助稳撤销帧。
     // 直道状态：偏差连续达到阈值才切换到弯道，过滤出弯后的单帧抖动。
     if (line_error >= SPEED_ENTER_LINE_PX)
     {
@@ -156,26 +164,54 @@ void speed_decision_update(void)
   }
   else
   {
-    // 弯道状态：图像中线偏差足够小，才累计直道确认帧。
+    // 弯道状态：速度仍按弯道值；一旦出现出弯迹象，先提高方向抑制来压住摆动。
     speed_corner_frame_count = 0;
     if (line_error <= SPEED_EXIT_LINE_PX)
     {
+      speed_exit_assist_active = 1;      // 首帧出弯迹象就启用直道Kgyro，帮助车辆稳定。
+      speed_exit_cancel_frame_count = 0; // 当前仍满足出弯条件，撤销助稳计数清零。
       speed_straight_frame_count++;
       if (speed_straight_confirm_frames <= 0 ||
           speed_straight_frame_count >= speed_straight_confirm_frames)
       {
         speed_state = SPEED_STATE_STRAIGHT;
         speed_straight_frame_count = 0;
+        speed_exit_assist_active = 0;
+        speed_exit_cancel_frame_count = 0;
       }
     }
     else
     {
       speed_straight_frame_count = 0;
+
+      if (speed_exit_assist_active != 0)
+      {
+        // 10~15像素属于滞回区，保留助稳；连续明显入弯才确认这不是出弯。
+        if (line_error >= SPEED_ENTER_LINE_PX)
+        {
+          speed_exit_cancel_frame_count++;
+          if (speed_corner_confirm_frames <= 0 ||
+              speed_exit_cancel_frame_count >= speed_corner_confirm_frames)
+          {
+            speed_exit_assist_active = 0;
+            speed_exit_cancel_frame_count = 0;
+          }
+        }
+        else
+        {
+          speed_exit_cancel_frame_count = 0;
+        }
+      }
+      else
+      {
+        speed_exit_cancel_frame_count = 0;
+      }
     }
   }
 
-  // 使用完成滞回判断后的道路状态，切换方向陀螺仪抑制系数。
-  Kgyro_steer = (speed_state == SPEED_STATE_STRAIGHT) ?
+  // 出弯确认期间先使用直道Kgyro压摆，但在正式确认直道前不提高目标速度。
+  Kgyro_steer = (speed_state == SPEED_STATE_STRAIGHT ||
+                 speed_exit_assist_active != 0) ?
                 speed_straight_kgyro_steer : SPEED_CORNER_KGYRO_STEER;
 
   // 状态只选择两档目标速度，不再计算curve_score或做速度插值。
