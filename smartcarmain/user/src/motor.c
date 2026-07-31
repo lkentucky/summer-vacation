@@ -21,7 +21,7 @@ float target_speedr = 0.0f;  // 右轮目标速度
 int base_speed = 0;     // 当前运行速度，0 表示停车
 int run_base_speed = 230; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
 float Kp_steer = 5.44f;     //4.93// 方向P系数
-float Kp_steer_square = 0.30f;     // 平方项P系数
+float Kp_steer_square = 0.28f;     // 平方项P系数
 float Kd_steer_position = 0.0f;    //0.09 // 方向D系数
 float Kd_steer_time = 0.01f;     // 方向D系数
 
