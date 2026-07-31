@@ -59,6 +59,7 @@ void Init_menu(void) {
   // 二状态速度决策菜单：spd_state中0=直道，1=弯道。
   dynamic_create_menu_txt(xunxian_folder, "spd_straight", &speed_straight_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "Kgyro_str", &speed_straight_kgyro_steer, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_state", &speed_state, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_cmd", &speed_decision_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_up", &speed_accel_step, float_box);

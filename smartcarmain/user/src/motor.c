@@ -49,14 +49,19 @@ static float motor_limit_float(float value, float min_value, float max_value)
  */
 
 // 直道状态下，最大中线偏差达到该值就判定入弯，单位：像素。
-#define SPEED_ENTER_LINE_PX           (18.0f)
+#define SPEED_ENTER_LINE_PX           (15.0f)
 // 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
-#define SPEED_EXIT_LINE_PX            (5.0f)
+#define SPEED_EXIT_LINE_PX            (10.0f)
+
+// 弯道降低陀螺仪方向抑制，避免影响转弯响应。
+#define SPEED_CORNER_KGYRO_STEER       (1.53f)
 
 // 直道状态的目标速度，单位：cm/s。
-int speed_straight_speed = 250;
+int speed_straight_speed = 268;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
-int speed_corner_speed = 230;
+int speed_corner_speed = 225;
+// 直道方向陀螺仪抑制系数，可在巡线菜单的Kgyro_str中调s整。
+float speed_straight_kgyro_steer = 2.0f;
 // 当前速度状态；0是直道，1是弯道，复位时默认按更安全的弯道处理。
 int speed_state = SPEED_STATE_CORNER;
 // 最终提供给base_speed的整数速度指令，单位：cm/s。
@@ -66,7 +71,7 @@ float speed_accel_step = 4.0f;
 // 每处理一个图像帧，速度最多降低多少，单位：cm/s/帧。
 float speed_decel_step = 12.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
-int speed_straight_confirm_frames = 2;
+int speed_straight_confirm_frames = 4;
 
 // 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
@@ -87,6 +92,7 @@ void speed_decision_reset(void)
 
   speed_state = SPEED_STATE_CORNER;       // 起步先按弯道处理，防止未知路况直接高速。
   speed_straight_frame_count = 0;         // 清除之前累计的直道帧。
+  Kgyro_steer = SPEED_CORNER_KGYRO_STEER; // 停车和起步阶段使用弯道抑制系数。
   speed_command = (float)reset_speed;     // 浮点指令回到弯道安全速度。
   speed_decision_speed = reset_speed;     // 对外整数指令同步复位。
 }
@@ -151,6 +157,10 @@ void speed_decision_update(void)
       speed_straight_frame_count = 0;
     }
   }
+
+  // 使用完成滞回判断后的道路状态，切换方向陀螺仪抑制系数。
+  Kgyro_steer = (speed_state == SPEED_STATE_STRAIGHT) ?
+                speed_straight_kgyro_steer : SPEED_CORNER_KGYRO_STEER;
 
   // 状态只选择两档目标速度，不再计算curve_score或做速度插值。
   target_speed = (speed_state == SPEED_STATE_STRAIGHT) ?

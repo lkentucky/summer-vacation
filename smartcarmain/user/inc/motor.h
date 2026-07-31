@@ -40,13 +40,14 @@ enum
 
 extern int speed_straight_speed;          // 直道目标速度，单位cm/s
 extern int speed_corner_speed;            // 弯道目标速度，单位cm/s
+extern float speed_straight_kgyro_steer;  // 直道方向陀螺仪抑制系数
 extern int speed_state;                   // 当前状态：0=直道，1=弯道
 extern int speed_decision_speed;          // 经过直道确认和加减速限制后的速度指令，单位cm/s
 extern float speed_accel_step;            // 每个图像帧允许增加的最大速度，单位cm/s
 extern float speed_decel_step;            // 每个图像帧允许减少的最大速度，单位cm/s
 extern int speed_straight_confirm_frames; // 弯道状态下连续多少帧满足直道条件才切回直道
 
-// 使用最新图像误差和Z轴角速度更新直道/弯道状态及速度指令，每个图像帧调用一次。
+// 使用最新图像误差更新直道/弯道状态、Kgyro系数及速度指令，每个图像帧调用一次。
 void speed_decision_update(void);
 // 清空直道计数，并把状态和速度恢复到弯道安全值。
 void speed_decision_reset(void);
