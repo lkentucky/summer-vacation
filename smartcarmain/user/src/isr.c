@@ -101,6 +101,9 @@ void TIM5_IRQHandler (void)
 //              默认优先级 修改优先级使用 interrupt_set_priority(TIM6_IRQn, 1);
 //-------------------------------------------------------------------------------------------------------------------
 volatile uint32 g_sys_tick = 0;
+#if MOTOR_PWM_TEST_ENABLE
+static bool motor_pwm_test_was_running = false; // 记录上一中断是否处于测试运行，用于每次启动清零累计计数。
+#endif
 void TIM6_IRQHandler (void)
 {
     g_sys_tick++;
@@ -112,10 +115,33 @@ void TIM6_IRQHandler (void)
     encoder_diffr = encoder_get_count(TIM4_ENCODER);  // 获取右轮编码器计数值
     encoder_clear_count(TIM4_ENCODER);                // 清空右轮编码器计数值
     motor_speedr = encoder_diffr / (SYS_TICK_SEC);   // 计算右轮速度，单位为脉冲数/秒
+    get_motor_speed();                                 // 直通测试也换算速度，便于菜单核对编码器方向。
 
-    get_motor_speed();                                 // 获取电机实际速度
+#if MOTOR_PWM_TEST_ENABLE
+    // 电机测试模式完全绕过方向环和速度PID，只检查K4控制的启停状态。
+    if (base_speed > 0)
+    {
+        if (!motor_pwm_test_was_running)
+        {
+            encoder_test_total_l = 0;
+            encoder_test_total_r = 0;
+            motor_pwm_test_was_running = true;
+        }
+        encoder_test_total_l += encoder_diffl;
+        encoder_test_total_r += encoder_diffr;
+        motorl_set_pwm(MOTOR_PWM_TEST_DUTY);
+        motorr_set_pwm(MOTOR_PWM_TEST_DUTY);
+    }
+    else
+    {
+        motor_pwm_test_was_running = false;
+        motorl_set_pwm(0);
+        motorr_set_pwm(0);
+    }
+#else
     steering_control_update();                         // 2ms转向环：使用上一帧图像误差刷新左右轮目标速度
     motor_pid_speedcontrol();            // 调用 PID 控制函数，设置目标速度为 200.0f cm/s
+#endif
 
     TIM6->SR &= ~TIM6->SR;
 }

@@ -96,3 +96,4 @@
 .\objects\motor.o: ..\..\libraries\zf_common\zf_common_headfile.h
 .\objects\motor.o: ..\user\inc\calculation.h
 .\objects\motor.o: ..\user\inc\IMU.h
+.\objects\motor.o: ..\user\inc\isr.h

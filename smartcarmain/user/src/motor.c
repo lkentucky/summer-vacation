@@ -1,10 +1,16 @@
 #include "motor.h"
 #include "IMU.h"
+#include "isr.h"
 
 #define D 6.5   //轮子直径
 #define PPR 1024 //编码器每转脉冲数
 #define STEER_MAX_RATIO       (0.85f)
 #define STEER_MAX_STEP        (15.0f)
+#define VISION_D_FILTER_HZ      (6.0f)   // 视觉误差微分低通截止频率，单位Hz。
+#define VISION_DEFAULT_DT_S     (0.020f) // 首帧或异常帧间隔时使用的默认周期，单位s。
+#define VISION_MIN_DT_S         (0.005f) // 接受的最小图像周期，防止微分被异常小dt放大。
+#define VISION_MAX_DT_S         (0.120f) // 接受的最大图像周期，超过后按默认周期处理。
+#define VISION_STALE_TIMEOUT_MS (120U)  // 图像超过该时间未更新时，期望角速度自动归零。
 float Kp = 9.36f;
 float Ki = 0.5f;
 float Kd = 0.01f;
@@ -13,22 +19,39 @@ int motor_speedl = 0;
 int motor_speedr = 0;   
 int encoder_diffl = 0;
 int encoder_diffr = 0;
+// 本次固定PWM运行期间的左编码器原始累计计数，下一次启动时清零。
+volatile int32 encoder_test_total_l = 0;
+// 本次固定PWM运行期间的右编码器原始累计计数，下一次启动时清零。
+volatile int32 encoder_test_total_r = 0;
 float real_speedl = 0.0f;
 float real_speedr = 0.0f;
 float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
-int run_base_speed = 230; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
-float Kp_steer = 5.44f;     //4.93// 方向P系数
-float Kp_steer_square = 0.28f;     // 平方项P系数
-float Kd_steer_position = 0.0f;    //0.09 // 方向D系数
-float Kd_steer_time = 0.01f;     // 方向D系数
+int run_base_speed = 50; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
+// 视觉外环P系数：每1像素横向偏差产生多少期望角速度，单位(deg/s)/pixel。
+float vision_yaw_kp = 3.5f;
+// 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
+float vision_yaw_kd = 0.015f;
+// 角速度内环P系数：每1deg/s角速度误差产生多少cm/s左右轮差速修正。
+float yaw_rate_kp = 1.53f;
+// 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
+float yaw_rate_limit_dps = 180.0f;
+// 陀螺仪安装方向修正：默认-1沿用原正Kgyro可抑制旋转的方向；方向错误时改为1。
+float yaw_rate_feedback_sign = -1.0f;
+// 视觉外环输出的期望角速度，主循环写入、2ms方向内环读取，单位deg/s。
+volatile float yaw_rate_ref_dps = 0.0f;
+// 角速度内环当前误差，供菜单观察，单位deg/s。
+volatile float yaw_rate_error_dps = 0.0f;
 
 static volatile int16 steer_error_near = 0;  // 图像处理输出的近处偏差，由主循环按帧更新
 static volatile int16 steer_error_far = 0;   // 图像处理输出的远处偏差，由主循环按帧更新
-static int16 steer_last_error = 0;
-static float steer_last_output = 0.0f;
+static int16 vision_last_image_error = 0;          // 上一图像帧的横向偏差，用于计算真实视觉微分。
+static float vision_error_rate_filter = 0.0f;      // 低通后的视觉误差变化速度，单位pixel/s。
+static bool vision_last_error_valid = false;       // false表示尚无上一帧，首帧不计算微分。
+static volatile uint32 vision_last_image_tick = 0; // 最近一次视觉外环更新时刻，单位2ms系统tick。
+static float steer_last_output = 0.0f;             // 上一次左右轮差速指令，用于限制每2ms变化量。
 
 static float motor_limit_float(float value, float min_value, float max_value)
 {
@@ -53,15 +76,10 @@ static float motor_limit_float(float value, float min_value, float max_value)
 // 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
 #define SPEED_EXIT_LINE_PX            (10.0f)
 
-// 弯道降低陀螺仪方向抑制，避免影响转弯响应。
-#define SPEED_CORNER_KGYRO_STEER       (1.53f)
-
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 268;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
 int speed_corner_speed = 225;
-// 直道方向陀螺仪抑制系数，可在巡线菜单的Kgyro_str中调s整。
-float speed_straight_kgyro_steer = 2.0f;
 // 当前速度状态；0是直道，1是弯道，复位时默认按更安全的弯道处理。
 int speed_state = SPEED_STATE_CORNER;
 // 最终提供给base_speed的整数速度指令，单位：cm/s。
@@ -79,10 +97,6 @@ int speed_corner_confirm_frames = 2;
 static int speed_straight_frame_count = 0;
 // 直道状态下已经连续满足入弯条件的帧数，仅在本文件内部使用。
 static int speed_corner_frame_count = 0;
-// 已进入出弯确认阶段时置1；此时速度仍按弯道值，但方向抑制提前使用直道值。
-static int speed_exit_assist_active = 0;
-// 出弯助稳期间，偏差连续重新达到入弯阈值的帧数，用于确认是否撤销助稳。
-static int speed_exit_cancel_frame_count = 0;
 // 带加减速斜率限制的浮点速度指令，保留小数以避免每帧取整误差，单位：cm/s。
 static float speed_command = 230.0f;
 
@@ -101,9 +115,6 @@ void speed_decision_reset(void)
   speed_state = SPEED_STATE_CORNER;       // 起步先按弯道处理，防止未知路况直接高速。
   speed_straight_frame_count = 0;         // 清除之前累计的直道帧。
   speed_corner_frame_count = 0;           // 清除之前累计的弯道帧。
-  speed_exit_assist_active = 0;           // 清除出弯助稳标志。
-  speed_exit_cancel_frame_count = 0;      // 清除助稳撤销确认帧数。
-  Kgyro_steer = SPEED_CORNER_KGYRO_STEER; // 停车和起步阶段使用弯道抑制系数。
   speed_command = (float)reset_speed;     // 浮点指令回到弯道安全速度。
   speed_decision_speed = reset_speed;     // 对外整数指令同步复位。
 }
@@ -143,8 +154,6 @@ void speed_decision_update(void)
 
   if (speed_state == SPEED_STATE_STRAIGHT)
   {
-    speed_exit_assist_active = 0;      // 已确认直道，不再需要出弯助稳。
-    speed_exit_cancel_frame_count = 0; // 直道状态不累计助稳撤销帧。
     // 直道状态：偏差连续达到阈值才切换到弯道，过滤出弯后的单帧抖动。
     if (line_error >= SPEED_ENTER_LINE_PX)
     {
@@ -164,55 +173,23 @@ void speed_decision_update(void)
   }
   else
   {
-    // 弯道状态：速度仍按弯道值；一旦出现出弯迹象，先提高方向抑制来压住摆动。
+    // 弯道状态：图像中线偏差足够小，才累计直道确认帧。
     speed_corner_frame_count = 0;
     if (line_error <= SPEED_EXIT_LINE_PX)
     {
-      speed_exit_assist_active = 1;      // 首帧出弯迹象就启用直道Kgyro，帮助车辆稳定。
-      speed_exit_cancel_frame_count = 0; // 当前仍满足出弯条件，撤销助稳计数清零。
       speed_straight_frame_count++;
       if (speed_straight_confirm_frames <= 0 ||
           speed_straight_frame_count >= speed_straight_confirm_frames)
       {
         speed_state = SPEED_STATE_STRAIGHT;
         speed_straight_frame_count = 0;
-        speed_exit_assist_active = 0;
-        speed_exit_cancel_frame_count = 0;
       }
     }
     else
     {
       speed_straight_frame_count = 0;
-
-      if (speed_exit_assist_active != 0)
-      {
-        // 10~15像素属于滞回区，保留助稳；连续明显入弯才确认这不是出弯。
-        if (line_error >= SPEED_ENTER_LINE_PX)
-        {
-          speed_exit_cancel_frame_count++;
-          if (speed_corner_confirm_frames <= 0 ||
-              speed_exit_cancel_frame_count >= speed_corner_confirm_frames)
-          {
-            speed_exit_assist_active = 0;
-            speed_exit_cancel_frame_count = 0;
-          }
-        }
-        else
-        {
-          speed_exit_cancel_frame_count = 0;
-        }
-      }
-      else
-      {
-        speed_exit_cancel_frame_count = 0;
-      }
     }
   }
-
-  // 出弯确认期间先使用直道Kgyro压摆，但在正式确认直道前不提高目标速度。
-  Kgyro_steer = (speed_state == SPEED_STATE_STRAIGHT ||
-                 speed_exit_assist_active != 0) ?
-                speed_straight_kgyro_steer : SPEED_CORNER_KGYRO_STEER;
 
   // 状态只选择两档目标速度，不再计算curve_score或做速度插值。
   target_speed = (speed_state == SPEED_STATE_STRAIGHT) ?
@@ -237,41 +214,91 @@ void speed_decision_update(void)
 }
 #endif
 
-void steering_set_image_error(int16 error_near, int16 error_far)
+// 每个新图像帧调用一次：视觉PD外环根据单一横向偏差生成期望角速度。
+// error_far只保留给速度状态判断使用，本版方向控制不使用远近点之差。
+void steering_set_image_error(int16 error_near, int16 error_far, float image_dt_s)
 {
+  float dt;               // 检查范围后的实际图像周期，单位s。
+  float raw_error_rate;   // 本帧横向偏差变化速度，单位pixel/s。
+  float filter_tau;       // 视觉D项一阶低通时间常数，单位s。
+  float filter_alpha;     // 视觉D项低通中上一结果所占比例。
+  float yaw_limit;        // 检查为非负数后的期望角速度限幅，单位deg/s。
+  float yaw_ref;          // 本帧视觉PD计算出的期望角速度，单位deg/s。
+
   steer_error_near = error_near;
   steer_error_far = error_far;
+
+  // 使用真实帧间隔计算微分；首帧和异常间隔不产生微分冲击。
+  dt = image_dt_s;
+  if (dt < VISION_MIN_DT_S || dt > VISION_MAX_DT_S)
+  {
+    dt = VISION_DEFAULT_DT_S;
+  }
+
+  if (vision_last_error_valid)
+  {
+    raw_error_rate = ((float)error_near - (float)vision_last_image_error) / dt;
+    filter_tau = 1.0f / (2.0f * 3.14159265359f * VISION_D_FILTER_HZ);
+    filter_alpha = filter_tau / (filter_tau + dt);
+    vision_error_rate_filter = filter_alpha * vision_error_rate_filter +
+                               (1.0f - filter_alpha) * raw_error_rate;
+  }
+  else
+  {
+    vision_error_rate_filter = 0.0f;
+    vision_last_error_valid = true;
+  }
+
+  vision_last_image_error = error_near;
+  vision_last_image_tick = g_sys_tick;
+
+  yaw_limit = (yaw_rate_limit_dps >= 0.0f) ?
+              yaw_rate_limit_dps : -yaw_rate_limit_dps;
+  yaw_ref = vision_yaw_kp * (float)error_near +
+            vision_yaw_kd * vision_error_rate_filter;
+  yaw_rate_ref_dps = motor_limit_float(yaw_ref, -yaw_limit, yaw_limit);
 }
 
-// 轻量级转向环：只使用上一帧图像误差 + 当前IMU滤波值，不做图像处理、不读IMU硬件。
-// 由TIM6每2ms调用，使左右轮目标速度刷新频率高于图像处理频率。
+// 由TIM6每2ms调用：角速度P内环跟踪视觉外环给出的期望角速度。
+// 本函数不处理图像、不读取IMU硬件，只使用主循环已经更新的期望值和陀螺仪滤波值。
 void steering_control_update(void)
 {
   if (base_speed > 0) {
-    int16 error_near = steer_error_near;
-    int16 error_far = steer_error_far;
-    int16 preview_error = error_far - error_near;
-    int16 d_error = error_near - steer_last_error;
+    float yaw_ref = yaw_rate_ref_dps; // 本次内环使用的期望角速度，单位deg/s。
+    float yaw_rate_measured;          // 修正安装方向后的实际角速度，单位deg/s。
+    float steering;                   // 角速度P环输出的左右轮速度差修正，单位cm/s。
+    float max_steering;               // 当前基础速度允许的最大差速修正，单位cm/s。
+    uint32 image_age_ms;              // 距离最近一次视觉更新的时间，单位ms。
 
-    float steering = Kp_steer * error_near
-                   + Kp_steer_square * error_near * float_abs(error_near)
-                   + Kd_steer_position * preview_error
-                   + Kd_steer_time * d_error
-                   + imu_get_steer_damping();
+    image_age_ms = (g_sys_tick - vision_last_image_tick) * SYS_TICK_MS;
+    if (image_age_ms > VISION_STALE_TIMEOUT_MS)
+    {
+      yaw_ref = 0.0f;
+      yaw_rate_ref_dps = 0.0f;
+    }
 
-    float max_steering = (float)base_speed * STEER_MAX_RATIO;
+    // yaw_rate_feedback_sign用于统一陀螺仪正方向和左右轮差速正方向。
+    yaw_rate_measured = yaw_rate_feedback_sign * imu_gyro_z_dps_filter;
+    yaw_rate_error_dps = yaw_ref - yaw_rate_measured;
+    steering = yaw_rate_kp * yaw_rate_error_dps;
+
+    max_steering = (float)base_speed * STEER_MAX_RATIO;
     steering = motor_limit_float(steering, -max_steering, max_steering);
     steering = motor_limit_float(steering,
                                  steer_last_output - STEER_MAX_STEP,
                                  steer_last_output + STEER_MAX_STEP);
 
-    steer_last_error = error_near;
     steer_last_output = steering;
 
     target_speedl = base_speed + steering;
     target_speedr = base_speed - steering;
   } else {
-    steer_last_error = 0;
+    yaw_rate_ref_dps = 0.0f;
+    yaw_rate_error_dps = 0.0f;
+    vision_last_image_error = 0;
+    vision_error_rate_filter = 0.0f;
+    vision_last_error_valid = false;
+    vision_last_image_tick = g_sys_tick;
     steer_last_output = 0.0f;
     target_speedl = 0.0f;
     target_speedr = 0.0f;
@@ -316,12 +343,12 @@ void motorr_set_pwm(int rpwm)
 
   if (rpwm >= 0) 
   {
-    gpio_high(MOTORR_DIR); // 设置右轮正转
+    gpio_low(MOTORR_DIR); // 设置右轮正转
     pwm_set_duty(MOTORR_PWM, rpwm);
   } 
   else 
   {
-    gpio_low(MOTORR_DIR); // 设置右轮反转
+    gpio_high(MOTORR_DIR); // 设置右轮反转
     pwm_set_duty(MOTORR_PWM, -rpwm);
   }
 }
@@ -338,8 +365,8 @@ void get_motor_speed(void)
 {
   // 获取编码器计数值
   
-  real_speedl = (float)motor_speedl / PPR /68*30* (D * PI); // 单位cm/s
-  real_speedr = -(float)motor_speedr / PPR /68*30* (D * PI); // 单位cm/s
+  real_speedl = -(float)motor_speedl / PPR /68*30* (D * PI); // 单位cm/s
+  real_speedr = (float)motor_speedr / PPR /68*30* (D * PI); // 单位cm/s
 }
 
 
@@ -352,7 +379,14 @@ void motor_pid_reset(void)
     errl_k1 = errl_k2 = 0;
     errr_k1 = errr_k2 = 0;
     control_effortl = control_effortr = 0;
-    steer_last_error = 0;
+    steer_error_near = 0;
+    steer_error_far = 0;
+    vision_last_image_error = 0;
+    vision_error_rate_filter = 0.0f;
+    vision_last_error_valid = false;
+    vision_last_image_tick = g_sys_tick;
+    yaw_rate_ref_dps = 0.0f;
+    yaw_rate_error_dps = 0.0f;
     steer_last_output = 0.0f;
 #if SPEED_DECISION_ENABLE
     speed_decision_reset();
@@ -377,14 +411,14 @@ void motor_pid_speedcontrol(void)
     errl_k2 = errl_k1;
     errl_k1 = errl;
     control_effortl += deltal;
-    if (control_effortl >  5000) control_effortl =  5000;   // 积分限幅
-    if (control_effortl < -5000) control_effortl = -5000;
+    if (control_effortl >  1000) control_effortl =  1000;   // 限幅阈值和钳位值都设为1000。
+    if (control_effortl < -1000) control_effortl = -1000;
 
     errr_k2 = errr_k1;
     errr_k1 = errr;
     control_effortr += deltar;
-    if (control_effortr >  5000) control_effortr =  5000;
-    if (control_effortr < -5000) control_effortr = -5000;
+    if (control_effortr >  1000) control_effortr =  1000;
+    if (control_effortr < -1000) control_effortr = -1000;
 
     motorl_set_pwm((int)control_effortl);
     motorr_set_pwm((int)control_effortr);

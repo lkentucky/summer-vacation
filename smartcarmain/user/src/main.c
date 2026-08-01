@@ -248,6 +248,7 @@ int main(void) {
     static uint8 track_lost_frame_count = 0;
     static uint8 track_start_grace_count = 0;
     static uint32 last_imu_tick = 0;
+    static uint32 last_motor_test_menu_tick = 0; // 电机菜单中编码器数据的最近刷新时刻。
 
     if (g_sys_tick - last_imu_tick >= 2) {
       last_imu_tick = g_sys_tick;
@@ -258,6 +259,12 @@ int main(void) {
       last_key_tick = g_sys_tick;
       if (key_handle())
         Show_menu();
+    }
+
+    if (MOTOR_PWM_TEST_ENABLE && menu_is_motor_page() &&
+        g_sys_tick - last_motor_test_menu_tick >= 50) {
+      last_motor_test_menu_tick = g_sys_tick;
+      Show_menu(); // 每100ms刷新一次累计计数和换算速度，避免只在按键时看到旧值。
     }
 
     if (base_speed > 0) {
@@ -322,7 +329,10 @@ int main(void) {
         ips200_show_int(IMAGE_MENU_CROSS_VALUE_X, IMAGE_MENU_CROSS_VALUE_Y,
                         cross_state, 3);
       }
-      if (base_speed > 0) {
+      if (MOTOR_PWM_TEST_ENABLE && MOTOR_PWM_TEST_IGNORE_TRACK_LOST) {
+        // 固定PWM台架测试没有赛道图像，跳过丢线停车；双击K4仍可立即停止电机。
+        step = STEP_STEER;
+      } else if (base_speed > 0) {
         if (track_start_grace_count > 0) {
           track_start_grace_count--;
           track_lost_frame_count = 0;
@@ -351,9 +361,11 @@ int main(void) {
     //   step = STEP_STEER;
     //   break;
     case STEP_STEER:
-      // 图像处理只负责按固定节拍更新赛道偏差；真正的转向环在TIM6中每2ms计算一次。
+      // 图像帧只运行视觉外环：使用单一中线偏差生成期望角速度，并按真实帧间隔计算D项。
+      // 远处偏差仍提供给速度状态判断，但本版方向控制不使用远近点之差。
       steering_set_image_error(mid_line_weighted_average()-MT9V03X_W/2,
-                               get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END));
+                               get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END),
+                               (float)image_frame_ms * 0.001f);
 #if SPEED_DECISION_ENABLE
       speed_decision_update();  // 每个新图像帧更新一次直道/弯道状态和目标速度
 #endif

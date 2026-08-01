@@ -9,6 +9,7 @@
 
 MenuItem head;
 MenuItem* current_index;
+static MenuItem* motor_folder = NULL;
 static MenuItem* image_folder = NULL;
 
 
@@ -33,7 +34,7 @@ void Init_menu(void) {
   head.kind = menu_folder;
 
   MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
-  MenuItem* motor_folder = dynamic_create_menu_folder(&head, "motor");
+  motor_folder = dynamic_create_menu_folder(&head, "motor");
   MenuItem* xunxian_folder = dynamic_create_menu_folder(&head, "xunxian");
   image_folder = dynamic_create_menu_folder(&head, "image");
 
@@ -48,18 +49,22 @@ void Init_menu(void) {
   dynamic_create_menu_txt(motor_folder, "target_speedr", &target_speedr, float_box);
   dynamic_create_menu_txt(motor_folder, "real_speedl", &real_speedl, float_box);
   dynamic_create_menu_txt(motor_folder, "real_speedr", &real_speedr, float_box);
+  dynamic_create_menu_txt(motor_folder, "enc_l_raw", (void *)&encoder_test_total_l, int32_box);
+  dynamic_create_menu_txt(motor_folder, "enc_r_raw", (void *)&encoder_test_total_r, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "run_speed", &run_base_speed, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "Kp_steer", &Kp_steer, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "Kp_steer_square", &Kp_steer_square, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "Kd_steer_position", &Kd_steer_position, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "Kd_steer_time", &Kd_steer_time, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "Kgyro_steer", &Kgyro_steer, float_box);
+  // 串级方向控制参数：视觉PD外环生成yaw_ref，角速度P内环跟踪yaw_ref。
+  dynamic_create_menu_txt(xunxian_folder, "vision_kp", &vision_yaw_kp, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "vision_kd", &vision_yaw_kd, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_kp", &yaw_rate_kp, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_max", &yaw_rate_limit_dps, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_sign", &yaw_rate_feedback_sign, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_ref", (void *)&yaw_rate_ref_dps, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_err", (void *)&yaw_rate_error_dps, float_box);
   dynamic_create_menu_txt(xunxian_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
 #if SPEED_DECISION_ENABLE
   // 二状态速度决策菜单：spd_state中0=直道，1=弯道。
   dynamic_create_menu_txt(xunxian_folder, "spd_straight", &speed_straight_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "Kgyro_str", &speed_straight_kgyro_steer, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_state", &speed_state, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_cmd", &speed_decision_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_up", &speed_accel_step, float_box);
@@ -143,6 +148,12 @@ bool menu_is_image_page(void) {
   return image_folder != NULL &&
          current_index != NULL &&
          current_index->father == image_folder;
+}
+
+bool menu_is_motor_page(void) {
+  return motor_folder != NULL &&
+         current_index != NULL &&
+         current_index->father == motor_folder;
 }
 
 void array_up(void) {

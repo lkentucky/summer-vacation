@@ -101,7 +101,7 @@ bool key_handle(void) {
     key1_repeat = 0;
   }
 
-  if (gpio_get_level(E3) == GPIO_LOW) {
+  if (gpio_get_level(E5) == GPIO_LOW) {
     if (!key2_held) {
       key2_held = true;
       key_2();

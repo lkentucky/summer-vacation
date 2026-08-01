@@ -11,6 +11,7 @@ void Show_menu(void);
 void Show_array(void);
 void Show_txt(void);
 bool menu_is_image_page(void);
+bool menu_is_motor_page(void); // 当前是否位于motor菜单，用于实时刷新编码器测试数据。
 void key_1(void);
 void key_2(void);
 void key_3(void);
