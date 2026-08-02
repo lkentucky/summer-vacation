@@ -1,4 +1,4 @@
-#include "image.h"
+#include "image.h "
 
 
 uint8 base_image[MT9V03X_H][MT9V03X_W];

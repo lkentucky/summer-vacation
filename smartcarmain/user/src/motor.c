@@ -29,7 +29,7 @@ float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
-int run_base_speed = 50; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
+int run_base_speed = 230; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
 // 视觉外环P系数：每1像素横向偏差产生多少期望角速度，单位(deg/s)/pixel。
 float vision_yaw_kp = 3.5f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
@@ -411,14 +411,14 @@ void motor_pid_speedcontrol(void)
     errl_k2 = errl_k1;
     errl_k1 = errl;
     control_effortl += deltal;
-    if (control_effortl >  1000) control_effortl =  1000;   // 限幅阈值和钳位值都设为1000。
-    if (control_effortl < -1000) control_effortl = -1000;
+    if (control_effortl >  5000) control_effortl =  5000;   // 限幅阈值和钳位值都设为5000。
+    if (control_effortl < -5000) control_effortl = -5000;
 
     errr_k2 = errr_k1;
     errr_k1 = errr;
     control_effortr += deltar;
-    if (control_effortr >  1000) control_effortr =  1000;
-    if (control_effortr < -1000) control_effortr = -1000;
+    if (control_effortr >  5000) control_effortr =  5000;
+    if (control_effortr < -5000) control_effortr = -5000;
 
     motorl_set_pwm((int)control_effortl);
     motorr_set_pwm((int)control_effortr);
