@@ -9,7 +9,7 @@
 #define MOTORR_PWM TIM5_PWM_CH4_A3                         //右轮PWM
 
 // 速度决策总开关：1=启用速度决策，0=禁用并继续使用run_base_speed。
-#define SPEED_DECISION_ENABLE (1)
+#define SPEED_DECISION_ENABLE (0)
 // 新板电机直通测试：1=双击K4后两轮固定PWM，0=恢复正常串级方向环和速度PID。
 #define MOTOR_PWM_TEST_ENABLE  (0)
 // 电机直通测试的固定PWM绝对值；正数表示按当前正转方向运行。
@@ -36,6 +36,7 @@ extern float target_speedr;  // 右轮目标速度
 extern int base_speed;       // 当前运行速度，0 表示停车
 extern int run_base_speed;   // 菜单可调的启动/巡线速度
 extern float vision_yaw_kp;           // 视觉外环P系数，单位(deg/s)/pixel
+extern float vision_yaw_kp_square;    // 视觉外环平方P系数，单位(deg/s)/(pixel^2)
 extern float vision_yaw_kd;           // 视觉外环D系数，单位deg/pixel
 extern float yaw_rate_kp;             // 角速度内环P系数，单位(cm/s)/(deg/s)
 extern float yaw_rate_limit_dps;      // 视觉外环最大期望角速度，单位deg/s

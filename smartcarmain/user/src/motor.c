@@ -4,7 +4,7 @@
 
 #define D 6.5   //轮子直径
 #define PPR 1024 //编码器每转脉冲数
-#define STEER_MAX_RATIO       (0.85f)
+#define STEER_MAX_RATIO       (0.85f)   // 当前基础速度允许的最大左右轮差速比例，单位：无量纲。
 #define STEER_MAX_STEP        (15.0f)
 #define VISION_D_FILTER_HZ      (6.0f)   // 视觉误差微分低通截止频率，单位Hz。
 #define VISION_DEFAULT_DT_S     (0.020f) // 首帧或异常帧间隔时使用的默认周期，单位s。
@@ -29,17 +29,20 @@ float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
-int run_base_speed = 230; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
+int run_base_speed = 270; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
 // 视觉外环P系数：每1像素横向偏差产生多少期望角速度，单位(deg/s)/pixel。
-float vision_yaw_kp = 3.5f;
+float vision_yaw_kp = 3.5f;//3.5
+// 视觉外环平方P系数：偏差越大增益越强，单位(deg/s)/(pixel^2)。
+// 当前0.18乘以yaw_rate_kp=1.53后，总平方系数约0.275，接近原来的0.28。
+float vision_yaw_kp_square = 0.23f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
-float vision_yaw_kd = 0.015f;
+float vision_yaw_kd = 0.0f;
 // 角速度内环P系数：每1deg/s角速度误差产生多少cm/s左右轮差速修正。
-float yaw_rate_kp = 1.53f;
+float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
 float yaw_rate_limit_dps = 180.0f;
 // 陀螺仪安装方向修正：默认-1沿用原正Kgyro可抑制旋转的方向；方向错误时改为1。
-float yaw_rate_feedback_sign = -1.0f;
+float yaw_rate_feedback_sign = -0.90f;
 // 视觉外环输出的期望角速度，主循环写入、2ms方向内环读取，单位deg/s。
 volatile float yaw_rate_ref_dps = 0.0f;
 // 角速度内环当前误差，供菜单观察，单位deg/s。
@@ -77,9 +80,9 @@ static float motor_limit_float(float value, float min_value, float max_value)
 #define SPEED_EXIT_LINE_PX            (10.0f)
 
 // 直道状态的目标速度，单位：cm/s。
-int speed_straight_speed = 268;
+int speed_straight_speed = 280;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
-int speed_corner_speed = 225;
+int speed_corner_speed = 250;
 // 当前速度状态；0是直道，1是弯道，复位时默认按更安全的弯道处理。
 int speed_state = SPEED_STATE_CORNER;
 // 最终提供给base_speed的整数速度指令，单位：cm/s。
@@ -224,6 +227,8 @@ void steering_set_image_error(int16 error_near, int16 error_far, float image_dt_
   float filter_alpha;     // 视觉D项低通中上一结果所占比例。
   float yaw_limit;        // 检查为非负数后的期望角速度限幅，单位deg/s。
   float yaw_ref;          // 本帧视觉PD计算出的期望角速度，单位deg/s。
+  float image_error;      // 本帧用于方向控制的单一中线偏差，单位pixel。
+  float image_error_abs;  // 中线偏差绝对值，使左右偏差使用相同平方增益。
 
   steer_error_near = error_near;
   steer_error_far = error_far;
@@ -254,7 +259,10 @@ void steering_set_image_error(int16 error_near, int16 error_far, float image_dt_
 
   yaw_limit = (yaw_rate_limit_dps >= 0.0f) ?
               yaw_rate_limit_dps : -yaw_rate_limit_dps;
-  yaw_ref = vision_yaw_kp * (float)error_near +
+  image_error = (float)error_near;
+  image_error_abs = (image_error >= 0.0f) ? image_error : -image_error;
+  yaw_ref = vision_yaw_kp * image_error +
+            vision_yaw_kp_square * image_error * image_error_abs +
             vision_yaw_kd * vision_error_rate_filter;
   yaw_rate_ref_dps = motor_limit_float(yaw_ref, -yaw_limit, yaw_limit);
 }

@@ -54,6 +54,7 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "run_speed", &run_base_speed, int32_box);
   // 串级方向控制参数：视觉PD外环生成yaw_ref，角速度P内环跟踪yaw_ref。
   dynamic_create_menu_txt(xunxian_folder, "vision_kp", &vision_yaw_kp, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "vision_kp2", &vision_yaw_kp_square, float_box);
   dynamic_create_menu_txt(xunxian_folder, "vision_kd", &vision_yaw_kd, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_kp", &yaw_rate_kp, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_max", &yaw_rate_limit_dps, float_box);
