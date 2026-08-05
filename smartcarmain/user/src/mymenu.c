@@ -21,6 +21,10 @@ extern int image_frame_ms;
 extern int image_proc_ms;
 extern int image_fps;
 extern int image_wait_count;
+extern int zebra_cross_count;       // 本次运行已经通过的斑马线数量
+extern int zebra_transition_count;  // 当前第50行找到的“白黑黑”次数
+extern int zebra_match_row_count;   // 48~52行中“白黑黑”次数达到6的行数
+extern int zebra_state;             // 斑马线状态：0等待、1确认、2通过
 
 void Init_menu(void) {
   // 初始化head
@@ -54,24 +58,26 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "run_speed", &run_base_speed, int32_box);
   // 串级方向控制参数：视觉PD外环生成yaw_ref，角速度P内环跟踪yaw_ref。
   dynamic_create_menu_txt(xunxian_folder, "vision_kp", &vision_yaw_kp, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "vision_kp2", &vision_yaw_kp_square, float_box);
   dynamic_create_menu_txt(xunxian_folder, "vision_kd", &vision_yaw_kd, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_kp", &yaw_rate_kp, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_max", &yaw_rate_limit_dps, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_sign", &yaw_rate_feedback_sign, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_ref", (void *)&yaw_rate_ref_dps, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_err", (void *)&yaw_rate_error_dps, float_box);
   dynamic_create_menu_txt(xunxian_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
 #if SPEED_DECISION_ENABLE
-  // 二状态速度决策菜单：spd_state中0=直道，1=弯道。
+  // 三状态速度决策菜单：spd_state中0=直道，1=弯道，2=摆动抑制。
   dynamic_create_menu_txt(xunxian_folder, "spd_straight", &speed_straight_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_str", &speed_straight_yaw_feedback_sign, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_cur", &speed_corner_yaw_feedback_sign, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "kp2_str", &speed_straight_vision_kp_square, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "kp2_cur", &speed_corner_vision_kp_square, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_state", &speed_state, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_cmd", &speed_decision_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_up", &speed_accel_step, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_down", &speed_decel_step, float_box);
   dynamic_create_menu_txt(xunxian_folder, "straight_n", &speed_straight_confirm_frames, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "corner_n", &speed_corner_confirm_frames, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "osc_gyro", &speed_oscillation_gyro_threshold, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "osc_n", &speed_oscillation_reversal_required, int32_box);
 #endif
   dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "frame_ms", &image_frame_ms, int32_box);
@@ -79,6 +85,10 @@ void Init_menu(void) {
   dynamic_create_menu_txt(image_folder, "fps", &image_fps, int32_box);
   dynamic_create_menu_txt(image_folder, "wait", &image_wait_count, int32_box);
   dynamic_create_menu_txt(image_folder, "cross", &cross_state, uint8_box);
+  dynamic_create_menu_txt(image_folder, "zebra_n", &zebra_cross_count, int32_box);
+  dynamic_create_menu_txt(image_folder, "zebra_wbb", &zebra_transition_count, int32_box);
+  dynamic_create_menu_txt(image_folder, "zebra_rows", &zebra_match_row_count, int32_box);
+  dynamic_create_menu_txt(image_folder, "zebra_state", &zebra_state, int32_box);
   dynamic_create_menu_txt(&head, "threshold", &threshold, uint8_box);
 
   current_index = head.first_son;

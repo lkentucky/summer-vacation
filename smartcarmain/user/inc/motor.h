@@ -9,7 +9,7 @@
 #define MOTORR_PWM TIM5_PWM_CH4_A3                         //右轮PWM
 
 // 速度决策总开关：1=启用速度决策，0=禁用并继续使用run_base_speed。
-#define SPEED_DECISION_ENABLE (0)
+#define SPEED_DECISION_ENABLE (1)
 // 新板电机直通测试：1=双击K4后两轮固定PWM，0=恢复正常串级方向环和速度PID。
 #define MOTOR_PWM_TEST_ENABLE  (0)
 // 电机直通测试的固定PWM绝对值；正数表示按当前正转方向运行。
@@ -36,7 +36,6 @@ extern float target_speedr;  // 右轮目标速度
 extern int base_speed;       // 当前运行速度，0 表示停车
 extern int run_base_speed;   // 菜单可调的启动/巡线速度
 extern float vision_yaw_kp;           // 视觉外环P系数，单位(deg/s)/pixel
-extern float vision_yaw_kp_square;    // 视觉外环平方P系数，单位(deg/s)/(pixel^2)
 extern float vision_yaw_kd;           // 视觉外环D系数，单位deg/pixel
 extern float yaw_rate_kp;             // 角速度内环P系数，单位(cm/s)/(deg/s)
 extern float yaw_rate_limit_dps;      // 视觉外环最大期望角速度，单位deg/s
@@ -45,16 +44,23 @@ extern volatile float yaw_rate_ref_dps;   // 视觉外环当前期望角速度�
 extern volatile float yaw_rate_error_dps; // 角速度内环当前误差，单位deg/s
 
 #if SPEED_DECISION_ENABLE
-// 速度状态机的两个状态；菜单中spd_state显示0表示直道，1表示弯道。
+// 速度状态机：菜单中spd_state显示0=直道，1=弯道，2=摆动抑制。
 enum
 {
   SPEED_STATE_STRAIGHT = 0,
-  SPEED_STATE_CORNER = 1
+  SPEED_STATE_CORNER = 1,
+  SPEED_STATE_OSCILLATION = 2
 };
 
 extern int speed_straight_speed;          // 直道目标速度，单位cm/s
 extern int speed_corner_speed;            // 弯道目标速度，单位cm/s
-extern int speed_state;                   // 当前状态：0=直道，1=弯道
+extern float speed_straight_yaw_feedback_sign; // 直道角速度反馈方向/比例
+extern float speed_corner_yaw_feedback_sign;   // 弯道角速度反馈方向/比例
+extern float speed_straight_vision_kp_square;  // 直道/出弯稳定阶段视觉平方P系数
+extern float speed_corner_vision_kp_square;    // 弯道视觉平方P系数
+extern float speed_oscillation_gyro_threshold; // 摆动检测的最小有效角速度绝对值，单位deg/s
+extern int speed_oscillation_reversal_required; // 窗口内触发摆动状态所需的角速度换向次数
+extern int speed_state;                   // 当前状态：0=直道，1=弯道，2=摆动抑制
 extern int speed_decision_speed;          // 经过直道确认和加减速限制后的速度指令，单位cm/s
 extern float speed_accel_step;            // 每个图像帧允许增加的最大速度，单位cm/s
 extern float speed_decel_step;            // 每个图像帧允许减少的最大速度，单位cm/s
