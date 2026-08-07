@@ -27,7 +27,7 @@
 
 #define CROSS_MID_LOST_PERCENT            60  // 中部左右同时丢线比例
 #define CROSS_NEAR_VALID_PERCENT          50  // 入口阶段近处双边线有效比例
-#define CROSS_REPAIR_FRAMES               10   // 每次识别十字后固定补线帧数
+#define CROSS_REPAIR_FRAMES               8   // 每次识别十字后固定补线帧数
 
 #define CROSS_FAR_MIN_RUN_ROWS            3   // 远点必须来自至少3行连续边线
 #define CROSS_FAR_MAX_COL_STEP            8   // 连续两行边线允许的最大横向跳

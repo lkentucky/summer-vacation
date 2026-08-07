@@ -22,8 +22,8 @@ extern int image_proc_ms;
 extern int image_fps;
 extern int image_wait_count;
 extern int zebra_cross_count;       // 本次运行已经通过的斑马线数量
-extern int zebra_transition_count;  // 当前第50行找到的“白黑黑”次数
-extern int zebra_match_row_count;   // 48~52行中“白黑黑”次数达到6的行数
+extern int zebra_transition_count;  // 当前第74行找到的“白黑黑”次数
+extern int zebra_match_row_count;   // 70~78行中“白黑黑”次数达到6的行数
 extern int zebra_state;             // 斑马线状态：0等待、1确认、2通过
 
 void Init_menu(void) {
@@ -63,8 +63,8 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
 #if SPEED_DECISION_ENABLE
   // 三状态速度决策菜单：spd_state中0=直道，1=弯道，2=摆动抑制。
-  dynamic_create_menu_txt(xunxian_folder, "spd_straight", &speed_straight_speed, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
+ // dynamic_create_menu_txt(xunxian_folder, "spd_straight", &speed_straight_speed, int32_box);
+ // dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_str", &speed_straight_yaw_feedback_sign, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_cur", &speed_corner_yaw_feedback_sign, float_box);
   dynamic_create_menu_txt(xunxian_folder, "ykp_str", &speed_straight_yaw_rate_kp, float_box);
@@ -78,6 +78,8 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "straight_n", &speed_straight_confirm_frames, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "corner_n", &speed_corner_confirm_frames, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "osc_n", &speed_oscillation_reversal_required, int32_box);
+  dynamic_create_menu_txt(xunxian_folder, "enter_px", &SPEED_ENTER_LINE_PX, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "exit_px", &SPEED_EXIT_LINE_PX, float_box);
 #else
   dynamic_create_menu_txt(xunxian_folder, "vision_kp", &vision_yaw_kp, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_kp", &yaw_rate_kp, float_box);

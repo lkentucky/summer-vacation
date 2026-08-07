@@ -57,12 +57,12 @@
 #define IMAGE_MENU_ZEBRA_JUMP_Y    (7 * 16)  // zebra_jump是图像菜单第8项，对应第7行
 #define IMAGE_MENU_ZEBRA_ROWS_Y    (8 * 16)  // zebra_rows是图像菜单第9项，对应第8行
 #define IMAGE_MENU_ZEBRA_STATE_Y   (9 * 16)  // zebra_state是图像菜单第10项，对应第9行
-#define ZEBRA_DETECT_ROW            50       // 在二值图第50行检测斑马线
-#define ZEBRA_DETECT_ROW_START      48       // 多行检测起始行
-#define ZEBRA_DETECT_ROW_END        52       // 多行检测结束行，共检查48~52五行
-#define ZEBRA_PATTERN_REQUIRED       8       // 每行至少找到8次“白黑黑”才算该行满足条件
-#define ZEBRA_MATCH_ROW_REQUIRED     3       // 五行中至少三行满足，当前帧才算斑马线候选
-#define ZEBRA_CONFIRM_FRAMES         3       // 候选连续出现三帧后，才正式累计一次斑马线
+#define ZEBRA_DETECT_ROW            74       // 在检测窗口中间第74行统计斑马线跳变
+#define ZEBRA_DETECT_ROW_START      70       // 多行检测起始行
+#define ZEBRA_DETECT_ROW_END        78       // 多行检测结束行，共检查70~78九行
+#define ZEBRA_PATTERN_REQUIRED       6       // 每行至少找到6次“白黑黑”才算该行满足条件
+#define ZEBRA_MATCH_ROW_REQUIRED     3       // 九行中至少三行满足，当前帧才算斑马线候选
+#define ZEBRA_CONFIRM_FRAMES         1       // 单帧已有多行校验；避免高速时斑马线越过窄检测区而漏检
 #define ZEBRA_RELEASE_FRAMES         5       // 通过后连续五帧无候选，才允许检测下一条
 #define ZEBRA_STOP_COUNT             2       // 累计检测到第2条斑马线后停车
 #define ZEBRA_STATE_SEARCH           0       // 状态0：等待斑马线候选
@@ -95,11 +95,11 @@ int image_proc_ms = 0;                          // 一次图像处理从开始�
 int image_fps = 0;                              // 实际处理帧率，fps
 int image_wait_count = 0;                       // 检查时摄像头还没给新帧的次数，持续增加代表摄像头FPS低于检查节拍
 int zebra_cross_count = 0;                      // 本次运行已经通过的斑马线数量，达到2后停车
-int zebra_transition_count = 0;                 // 当前二值图第50行找到的“白黑黑”次数，用于菜单观察
+int zebra_transition_count = 0;                 // 当前二值图第74行找到的“白黑黑”次数，用于菜单观察
 static bool zebra_detect_latched = false;       // 当前斑马线是否已计数，防止同一条斑马线被连续多帧重复累计
 static uint8 zebra_release_frame_count = 0;     // 状态2中斑马线候选连续消失的帧数
 
-int zebra_match_row_count = 0;                  // 48~52行中“白黑黑”次数达到6的行数
+int zebra_match_row_count = 0;                  // 70~78行中“白黑黑”次数达到6的行数
 int zebra_state = ZEBRA_STATE_SEARCH;           // 斑马线状态机：0等待、1确认、2通过
 static uint8 zebra_confirm_frame_count = 0;     // 状态1中连续满足多行条件的图像帧数
 
@@ -239,7 +239,7 @@ static int zebra_count_row_patterns(uint8 row)
   return pattern_count;
 }
 
-// 检查48~52行，返回其中“白黑黑”次数达到6的行数。
+// 检查70~78行，返回其中“白黑黑”次数达到6的行数。
 // 多行同时满足可以排除普通赛道中只影响一两行的边缘噪点。
 static int zebra_count_matching_rows(void)
 {
@@ -254,7 +254,7 @@ static int zebra_count_matching_rows(void)
   return matching_rows;
 }
 
-// 三状态检测：0等待候选、1连续帧确认、2本条已计数并等待离开。
+// 三状态检测：0等待候选、1确认候选、2本条已计数并等待离开。
 // 返回true表示刚确认到第2条斑马线，主循环应立即执行停车保护。
 static bool zebra_state_process(void)
 {
@@ -298,7 +298,7 @@ static bool zebra_state_process(void)
     return false;
   }
 
-  // 状态1：五行中至少三行满足，并且必须连续保持三帧。
+  // 状态1：九行中至少三行满足。空间上的多行一致性已经完成抗噪确认。
   zebra_state = ZEBRA_STATE_CONFIRM;
   if (zebra_confirm_frame_count < ZEBRA_CONFIRM_FRAMES) {
     zebra_confirm_frame_count++;
@@ -307,7 +307,7 @@ static bool zebra_state_process(void)
     return false;
   }
 
-  // 三帧确认完成后只累计一次，随后进入状态2等待这条斑马线离开。
+  // 确认完成后只累计一次，随后进入状态2等待这条斑马线离开。
   zebra_detect_latched = true;
   zebra_state = ZEBRA_STATE_PASSING;
   zebra_confirm_frame_count = 0;

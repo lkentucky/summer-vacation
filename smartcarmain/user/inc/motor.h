@@ -53,6 +53,9 @@ enum
   SPEED_STATE_OSCILLATION = 2
 };
 
+
+extern float SPEED_ENTER_LINE_PX; // 进入弯道状态的最小偏差绝对值，单位pixel
+extern float SPEED_EXIT_LINE_PX;  // 退出弯道状态的最大偏差绝对值，单位pixel  
 extern int speed_straight_speed;          // 直道目标速度，单位cm/s
 extern int speed_corner_speed;            // 弯道目标速度，单位cm/s
 extern float speed_straight_yaw_feedback_sign; // 直道角速度反馈方向/比例

@@ -35,7 +35,7 @@ float vision_yaw_kp = 4.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.54f;
+float vision_yaw_kff = 0.40f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
@@ -75,9 +75,9 @@ static float motor_limit_float(float value, float min_value, float max_value)
  */
 
 // 直道状态下，最大中线偏差达到该值就判定入弯，单位：像素。
-#define SPEED_ENTER_LINE_PX           (15.0f)
+float SPEED_ENTER_LINE_PX= (10.0f);
 // 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
-#define SPEED_EXIT_LINE_PX            (10.0f)
+float SPEED_EXIT_LINE_PX= (10.0f);
 // 角速度换向必须集中在该图像帧窗口内，才认为是快速左右摇摆。
 #define SPEED_OSCILLATION_WINDOW_FRAMES (10)
 // 摆动状态保持该帧数后进入直道，期间使用弯道安全速度和直道方向参数。
@@ -94,11 +94,11 @@ int speed_corner_speed = 230;
 // 直道使用原来的角速度反馈方向/比例。
 float speed_straight_yaw_feedback_sign = -1.01f;  //-1.01
 // 弯道降低角速度反馈比例，避免影响弯道响应。
-float speed_corner_yaw_feedback_sign = -0.40f;//-0.40
+float speed_corner_yaw_feedback_sign = -0.46f;//-0.40
 // 直道/出弯稳定阶段的角速度内环P系数。
-float speed_straight_yaw_rate_kp = 1.41f;
+float speed_straight_yaw_rate_kp = 1.38f;
 // 弯道的角速度内环P系数。
-float speed_corner_yaw_rate_kp = 1.41f;
+float speed_corner_yaw_rate_kp = 1.46f;
 // 直道/出弯稳定阶段直接使用的视觉外环P系数。
 float speed_straight_vision_kp = 4.0f;
 // 弯道直接使用的视觉外环P系数。
@@ -118,7 +118,7 @@ float speed_decel_step = 13.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
 int speed_straight_confirm_frames = 2;
 // 在直道状态下，连续满足多少帧入弯条件后才切换到弯道。
-int speed_corner_confirm_frames = 3;
+int speed_corner_confirm_frames = 1;
 
 // 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
