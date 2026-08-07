@@ -57,10 +57,9 @@ void Init_menu(void) {
   dynamic_create_menu_txt(motor_folder, "enc_r_raw", (void *)&encoder_test_total_r, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "run_speed", &run_base_speed, int32_box);
   // 串级方向控制参数：视觉PD外环生成yaw_ref，角速度P内环跟踪yaw_ref。
-  dynamic_create_menu_txt(xunxian_folder, "vision_kp", &vision_yaw_kp, float_box);
   dynamic_create_menu_txt(xunxian_folder, "vision_kd", &vision_yaw_kd, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_kp", &yaw_rate_kp, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_max", &yaw_rate_limit_dps, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "yaw_max", &yaw_rate_limit_dps, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
 #if SPEED_DECISION_ENABLE
   // 三状态速度决策菜单：spd_state中0=直道，1=弯道，2=摆动抑制。
@@ -68,8 +67,8 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_str", &speed_straight_yaw_feedback_sign, float_box);
   dynamic_create_menu_txt(xunxian_folder, "yaw_cur", &speed_corner_yaw_feedback_sign, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "kp2_str", &speed_straight_vision_kp_square, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "kp2_cur", &speed_corner_vision_kp_square, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "kp_str", &speed_straight_vision_kp, float_box);
+  dynamic_create_menu_txt(xunxian_folder, "kp_cur", &speed_corner_vision_kp, float_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_state", &speed_state, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_cmd", &speed_decision_speed, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "spd_up", &speed_accel_step, float_box);
@@ -78,6 +77,8 @@ void Init_menu(void) {
   dynamic_create_menu_txt(xunxian_folder, "corner_n", &speed_corner_confirm_frames, int32_box);
   dynamic_create_menu_txt(xunxian_folder, "osc_gyro", &speed_oscillation_gyro_threshold, float_box);
   dynamic_create_menu_txt(xunxian_folder, "osc_n", &speed_oscillation_reversal_required, int32_box);
+#else
+  dynamic_create_menu_txt(xunxian_folder, "vision_kp", &vision_yaw_kp, float_box);
 #endif
   dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "frame_ms", &image_frame_ms, int32_box);
@@ -264,7 +265,12 @@ void key_4_double(void) {
   target_speedr = 0.0f;
 
   if (base_speed == 0) {
-    base_speed = run_base_speed;  // 使用菜单中的 run_speed，不再写死固定速度
+#if SPEED_DECISION_ENABLE
+    // motor_pid_reset已把速度指令复位到起步值，避免先写入run_speed形成瞬时高速尖峰。
+    base_speed = speed_decision_speed;
+#else
+    base_speed = run_base_speed;
+#endif
   } else {
     base_speed = 0;
   }

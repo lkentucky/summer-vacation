@@ -38,7 +38,7 @@ extern int run_base_speed;   // 菜单可调的启动/巡线速度
 extern float vision_yaw_kp;           // 视觉外环P系数，单位(deg/s)/pixel
 extern float vision_yaw_kd;           // 视觉外环D系数，单位deg/pixel
 extern float yaw_rate_kp;             // 角速度内环P系数，单位(cm/s)/(deg/s)
-extern float yaw_rate_limit_dps;      // 视觉外环最大期望角速度，单位deg/s
+extern int yaw_rate_limit_dps;      // 视觉外环最大期望角速度，单位deg/s
 extern float yaw_rate_feedback_sign;  // 陀螺仪安装方向修正，只使用1或-1
 extern volatile float yaw_rate_ref_dps;   // 视觉外环当前期望角速度，单位deg/s
 extern volatile float yaw_rate_error_dps; // 角速度内环当前误差，单位deg/s
@@ -56,8 +56,8 @@ extern int speed_straight_speed;          // 直道目标速度，单位cm/s
 extern int speed_corner_speed;            // 弯道目标速度，单位cm/s
 extern float speed_straight_yaw_feedback_sign; // 直道角速度反馈方向/比例
 extern float speed_corner_yaw_feedback_sign;   // 弯道角速度反馈方向/比例
-extern float speed_straight_vision_kp_square;  // 直道/出弯稳定阶段视觉平方P系数
-extern float speed_corner_vision_kp_square;    // 弯道视觉平方P系数
+extern float speed_straight_vision_kp;         // 直道/出弯稳定阶段视觉外环P系数
+extern float speed_corner_vision_kp;           // 弯道视觉外环P系数
 extern float speed_oscillation_gyro_threshold; // 摆动检测的最小有效角速度绝对值，单位deg/s
 extern int speed_oscillation_reversal_required; // 窗口内触发摆动状态所需的角速度换向次数
 extern int speed_state;                   // 当前状态：0=直道，1=弯道，2=摆动抑制
@@ -69,7 +69,7 @@ extern int speed_corner_confirm_frames;   // 直道状态下连续多少帧满�
 
 // 使用最新图像误差更新直道/弯道状态及速度指令，每个图像帧调用一次。
 void speed_decision_update(void);
-// 清空直道计数，并把状态和速度恢复到弯道安全值。
+// 清空状态计数，恢复直道参数，并把速度指令置为起步速度。
 void speed_decision_reset(void);
 #endif
 
@@ -80,7 +80,7 @@ void init_encoder(void);
 void get_motor_speed(void);
 // 每个图像帧更新视觉外环；image_dt_s为真实图像帧间隔，单位s。
 void steering_set_image_error(int16 error_near, int16 error_far, float image_dt_s);
-// 每2ms执行角速度内环，根据期望角速度和IMU角速度更新左右轮目标速度。
+// 每10ms执行角速度内环，根据期望角速度和IMU角速度更新左右轮目标速度。
 void steering_control_update(void);
 void motor_pid_speedcontrol(void);
 void motor_pid_reset(void);

@@ -60,7 +60,7 @@
 #define ZEBRA_DETECT_ROW            50       // 在二值图第50行检测斑马线
 #define ZEBRA_DETECT_ROW_START      48       // 多行检测起始行
 #define ZEBRA_DETECT_ROW_END        52       // 多行检测结束行，共检查48~52五行
-#define ZEBRA_PATTERN_REQUIRED       6       // 每行至少找到6次“白黑黑”才算该行满足条件
+#define ZEBRA_PATTERN_REQUIRED       8       // 每行至少找到8次“白黑黑”才算该行满足条件
 #define ZEBRA_MATCH_ROW_REQUIRED     3       // 五行中至少三行满足，当前帧才算斑马线候选
 #define ZEBRA_CONFIRM_FRAMES         3       // 候选连续出现三帧后，才正式累计一次斑马线
 #define ZEBRA_RELEASE_FRAMES         5       // 通过后连续五帧无候选，才允许检测下一条
@@ -362,7 +362,7 @@ int main(void) {
 
   key_state_reset();   // 复位按键状态（热复位兼容）
   motor_pid_reset();   // 复位PID积分（热复位兼容）
-  pit_ms_init(TIM6_PIT, 2);   // TIM6: PID控速，2ms
+  pit_ms_init(TIM6_PIT, 2);   // TIM6: 速度PID每2ms，转向环在中断内分频为10ms。
 
   Show_menu();  // 首次显示菜单
 

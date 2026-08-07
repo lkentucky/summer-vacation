@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\MM32F327X_G8P.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\MM32F327X_G8P.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Aug 05 22:23:59 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Fri Aug 07 10:40:37 2026
 <BR><P>
 <H3>Maximum Stack Usage =       1140 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -370,6 +370,7 @@ Global Symbols
 <LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_initialize_attitude
 <LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fsub
 <LI><a href="#[5c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_frsub
+<LI><a href="#[136]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;speed_decision_reset
 <LI><a href="#[101]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sinf
 <LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cosf
 <LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;atan2f
@@ -540,6 +541,7 @@ Global Symbols
 <LI><a href="#[3c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIM6_IRQHandler
 <LI><a href="#[132]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;speed_decision_update
 <LI><a href="#[df]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;func_float_to_str
+<LI><a href="#[136]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;speed_decision_reset
 <LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ips200_show_float
 <LI><a href="#[101]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sinf
 <LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cosf
@@ -596,6 +598,7 @@ Global Symbols
 <LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_initialize_attitude
 <LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_clamp_float
 <LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_abs_float
+<LI><a href="#[136]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;speed_decision_reset
 <LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;speed_abs_float
 <LI><a href="#[135]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_limit_float
 </UL>
@@ -807,7 +810,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_mm32f3277g.o(RESET)
 </UL>
-<P><STRONG><a name="[78]"></a>Init_menu</STRONG> (Thumb, 602 bytes, Stack size 16 bytes, mymenu.o(i.Init_menu))
+<P><STRONG><a name="[78]"></a>Init_menu</STRONG> (Thumb, 590 bytes, Stack size 16 bytes, mymenu.o(i.Init_menu))
 <BR><BR>[Stack]<UL><LI>Max Depth = 88<LI>Call Chain = Init_menu &rArr; dynamic_create_menu_txt &rArr; create_menu_txt &rArr; create_menu_item
 </UL>
 <BR>[Calls]<UL><LI><a href="#[7a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;dynamic_create_menu_txt
@@ -866,7 +869,7 @@ Global Symbols
 <P><STRONG><a name="[38]"></a>TIM5_IRQHandler</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, isr.o(i.TIM5_IRQHandler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_mm32f3277g.o(RESET)
 </UL>
-<P><STRONG><a name="[3c]"></a>TIM6_IRQHandler</STRONG> (Thumb, 124 bytes, Stack size 16 bytes, isr.o(i.TIM6_IRQHandler))
+<P><STRONG><a name="[3c]"></a>TIM6_IRQHandler</STRONG> (Thumb, 142 bytes, Stack size 16 bytes, isr.o(i.TIM6_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 776<LI>Call Chain = TIM6_IRQHandler &rArr; motor_pid_speedcontrol &rArr; motorr_set_pwm &rArr; pwm_set_duty &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;steering_control_update
@@ -1783,7 +1786,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[11b]"></a>key_4_double</STRONG> (Thumb, 40 bytes, Stack size 8 bytes, mymenu.o(i.key_4_double))
-<BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = key_4_double &rArr; motor_pid_reset &rArr; speed_decision_reset &rArr; __aeabi_i2f &rArr; _float_epilogue
+<BR><BR>[Stack]<UL><LI>Max Depth = 52<LI>Call Chain = key_4_double &rArr; motor_pid_reset &rArr; speed_decision_reset &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_pid_reset
 </UL>
@@ -1908,7 +1911,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[a1]"></a>motor_pid_reset</STRONG> (Thumb, 76 bytes, Stack size 8 bytes, motor.o(i.motor_pid_reset))
-<BR><BR>[Stack]<UL><LI>Max Depth = 20<LI>Call Chain = motor_pid_reset &rArr; speed_decision_reset &rArr; __aeabi_i2f &rArr; _float_epilogue
+<BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = motor_pid_reset &rArr; speed_decision_reset &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[136]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;speed_decision_reset
 </UL>
@@ -2124,17 +2127,20 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;mt9v03x_write_word_sccb
 </UL>
 
-<P><STRONG><a name="[136]"></a>speed_decision_reset</STRONG> (Thumb, 92 bytes, Stack size 8 bytes, motor.o(i.speed_decision_reset))
-<BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = speed_decision_reset &rArr; __aeabi_i2f &rArr; _float_epilogue
+<P><STRONG><a name="[136]"></a>speed_decision_reset</STRONG> (Thumb, 164 bytes, Stack size 16 bytes, motor.o(i.speed_decision_reset))
+<BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = speed_decision_reset &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
-<BR>[Calls]<UL><LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_i2f
+<BR>[Calls]<UL><LI><a href="#[83]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2iz
+<LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_i2f
+<LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fadd
+<LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cfcmple
 </UL>
 <BR>[Called By]<UL><LI><a href="#[132]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;speed_decision_update
 <LI><a href="#[a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_pid_reset
 </UL>
 
 <P><STRONG><a name="[132]"></a>speed_decision_update</STRONG> (Thumb, 850 bytes, Stack size 48 bytes, motor.o(i.speed_decision_update))
-<BR><BR>[Stack]<UL><LI>Max Depth = 80<LI>Call Chain = speed_decision_update &rArr; speed_oscillation_detect &rArr; speed_abs_float
+<BR><BR>[Stack]<UL><LI>Max Depth = 84<LI>Call Chain = speed_decision_update &rArr; speed_decision_reset &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[83]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2iz
 <LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_i2f
@@ -2212,8 +2218,8 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[3c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIM6_IRQHandler
 </UL>
 
-<P><STRONG><a name="[131]"></a>steering_set_image_error</STRONG> (Thumb, 328 bytes, Stack size 72 bytes, motor.o(i.steering_set_image_error))
-<BR><BR>[Stack]<UL><LI>Max Depth = 92<LI>Call Chain = steering_set_image_error &rArr; __aeabi_fsub &rArr; __aeabi_fadd &rArr; _float_epilogue
+<P><STRONG><a name="[131]"></a>steering_set_image_error</STRONG> (Thumb, 288 bytes, Stack size 56 bytes, motor.o(i.steering_set_image_error))
+<BR><BR>[Stack]<UL><LI>Max Depth = 76<LI>Call Chain = steering_set_image_error &rArr; __aeabi_fsub &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fdiv
 <LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_i2f
@@ -2350,7 +2356,7 @@ Global Symbols
 Local Symbols
 </H3>
 <P><STRONG><a name="[a0]"></a>car_stop_protect</STRONG> (Thumb, 22 bytes, Stack size 8 bytes, main.o(i.car_stop_protect))
-<BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = car_stop_protect &rArr; motor_pid_reset &rArr; speed_decision_reset &rArr; __aeabi_i2f &rArr; _float_epilogue
+<BR><BR>[Stack]<UL><LI>Max Depth = 52<LI>Call Chain = car_stop_protect &rArr; motor_pid_reset &rArr; speed_decision_reset &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_pid_reset
 </UL>

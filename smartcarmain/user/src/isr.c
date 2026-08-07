@@ -103,6 +103,11 @@ void TIM5_IRQHandler (void)
 volatile uint32 g_sys_tick = 0;
 #if MOTOR_PWM_TEST_ENABLE
 static bool motor_pwm_test_was_running = false; // 记录上一中断是否处于测试运行，用于每次启动清零累计计数。
+#else
+// TIM6每2ms进入一次；转向环5分频后每10ms更新，速度环仍每2ms更新。
+#define STEERING_CONTROL_DIVIDER (1U)
+// 首次TIM6中断立即更新转向，之后保持10ms间隔。
+static uint8 steering_control_divider = STEERING_CONTROL_DIVIDER - 1U;
 #endif
 void TIM6_IRQHandler (void)
 {
@@ -139,8 +144,12 @@ void TIM6_IRQHandler (void)
         motorr_set_pwm(0);
     }
 #else
-    steering_control_update();                         // 2ms转向环：使用上一帧图像误差刷新左右轮目标速度
-    motor_pid_speedcontrol();            // 调用 PID 控制函数，设置目标速度为 200.0f cm/s
+    if (++steering_control_divider >= STEERING_CONTROL_DIVIDER)
+    {
+        steering_control_divider = 0;
+        steering_control_update();                     // 10ms转向环：刷新左右轮目标速度。
+    }
+    motor_pid_speedcontrol();                          // 2ms速度PID：跟踪左右轮目标速度。
 #endif
 
     TIM6->SR &= ~TIM6->SR;
