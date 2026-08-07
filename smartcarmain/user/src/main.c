@@ -517,9 +517,9 @@ int main(void) {
     //   step = STEP_STEER;
     //   break;
     case STEP_STEER:
-      // 图像帧只运行视觉外环：使用单一中线偏差生成期望角速度，并按真实帧间隔计算D项。
-      // 远处偏差仍提供给速度状态判断，但本版方向控制不使用远近点之差。
-      steering_set_image_error(mid_line_weighted_average()-MT9V03X_W/2,
+      // 主反馈是多行中线加权偏差；远点偏差用于生成低通后的预瞄前馈。
+      // 加权偏差不等于单独近点，控制器内使用“远点-加权偏差”而非几何远近点斜率。
+      steering_set_image_error((int16)mid_line_weighted_average() - STEER_CENTER_COL,
                                get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END),
                                (float)image_frame_ms * 0.001f);
 #if SPEED_DECISION_ENABLE

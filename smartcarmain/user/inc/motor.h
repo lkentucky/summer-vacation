@@ -37,6 +37,7 @@ extern int base_speed;       // 当前运行速度，0 表示停车
 extern int run_base_speed;   // 菜单可调的启动/巡线速度
 extern float vision_yaw_kp;           // 视觉外环P系数，单位(deg/s)/pixel
 extern float vision_yaw_kd;           // 视觉外环D系数，单位deg/pixel
+extern float vision_yaw_kff;          // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel
 extern float yaw_rate_kp;             // 角速度内环P系数，单位(cm/s)/(deg/s)
 extern int yaw_rate_limit_dps;      // 视觉外环最大期望角速度，单位deg/s
 extern float yaw_rate_feedback_sign;  // 陀螺仪安装方向修正，只使用1或-1
@@ -80,8 +81,8 @@ void motorl_set_pwm(int lpwm);
 void motorr_set_pwm(int rpwm);
 void init_encoder(void);
 void get_motor_speed(void);
-// 每个图像帧更新视觉外环；image_dt_s为真实图像帧间隔，单位s。
-void steering_set_image_error(int16 error_near, int16 error_far, float image_dt_s);
+// 每个图像帧更新视觉外环；error_weighted为加权偏差，image_dt_s为真实帧间隔。
+void steering_set_image_error(int16 error_weighted, int16 error_far, float image_dt_s);
 // 每10ms执行角速度内环，根据期望角速度和IMU角速度更新左右轮目标速度。
 void steering_control_update(void);
 void motor_pid_speedcontrol(void);

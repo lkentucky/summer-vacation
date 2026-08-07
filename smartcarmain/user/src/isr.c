@@ -147,10 +147,11 @@ void TIM6_IRQHandler (void)
     if (++steering_control_divider >= STEERING_CONTROL_DIVIDER)
     {
         steering_control_divider = 0;
-        motor_pid_speedcontrol();                          // 4ms速度PID：跟踪左右轮目标速度。
+        steering_control_update();                     // 2ms转向环：刷新左右轮目标速度.
     }
     
-    steering_control_update();                     // 2ms转向环：刷新左右轮目标速度。
+    
+    motor_pid_speedcontrol();                          // 4ms速度PID：跟踪左右轮目标速度。
     
 #endif
 

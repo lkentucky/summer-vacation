@@ -34,6 +34,8 @@ int run_base_speed = 280; //250// 菜单可调的启动/巡线速度，K4 启动
 float vision_yaw_kp = 4.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
+// 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
+float vision_yaw_kff = 0.54f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
@@ -45,10 +47,11 @@ volatile float yaw_rate_ref_dps = 0.0f;
 // 角速度内环当前误差，供菜单观察，单位deg/s。
 volatile float yaw_rate_error_dps = 0.0f;
 
-static volatile int16 steer_error_near = 0;  // 图像处理输出的近处偏差，由主循环按帧更新
-static volatile int16 steer_error_far = 0;   // 图像处理输出的远处偏差，由主循环按帧更新
-static int16 vision_last_image_error = 0;          // 上一图像帧的横向偏差，用于计算真实视觉微分。
+static volatile int16 steer_error_weighted = 0; // 加权中线偏差，不是单独近点，由主循环按帧更新。
+static volatile int16 steer_error_far = 0;      // 35~40行远点中线平均偏差，由主循环按帧更新。
+static int16 vision_last_weighted_error = 0;    // 上一图像帧的加权偏差，用于计算真实视觉微分。
 static float vision_error_rate_filter = 0.0f;      // 低通后的视觉误差变化速度，单位pixel/s。
+static float vision_preview_error_filter = 0.0f;   // 低通后的“远点-加权偏差”预瞄增量，单位pixel。
 static bool vision_last_error_valid = false;       // false表示尚无上一帧，首帧不计算微分。
 static volatile uint32 vision_last_image_tick = 0; // 最近一次视觉外环更新时刻，单位2ms系统tick。
 static float steer_last_output = 0.0f;             // 上一次左右轮差速指令，用于限制每10ms变化量。
@@ -87,19 +90,19 @@ static float motor_limit_float(float value, float min_value, float max_value)
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 290;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
-int speed_corner_speed = 232;
+int speed_corner_speed = 230;
 // 直道使用原来的角速度反馈方向/比例。
 float speed_straight_yaw_feedback_sign = -1.01f;  //-1.01
 // 弯道降低角速度反馈比例，避免影响弯道响应。
 float speed_corner_yaw_feedback_sign = -0.40f;//-0.40
 // 直道/出弯稳定阶段的角速度内环P系数。
-float speed_straight_yaw_rate_kp = 1.00f;
+float speed_straight_yaw_rate_kp = 1.41f;
 // 弯道的角速度内环P系数。
-float speed_corner_yaw_rate_kp = 1.53f;
+float speed_corner_yaw_rate_kp = 1.41f;
 // 直道/出弯稳定阶段直接使用的视觉外环P系数。
 float speed_straight_vision_kp = 4.0f;
 // 弯道直接使用的视觉外环P系数。
-float speed_corner_vision_kp = 7.0f;
+float speed_corner_vision_kp = 6.8f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
 float speed_oscillation_gyro_threshold = 15.0f;
 // 在检测窗口内达到该换向次数后进入摆动抑制状态。
@@ -115,7 +118,7 @@ float speed_decel_step = 13.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
 int speed_straight_confirm_frames = 2;
 // 在直道状态下，连续满足多少帧入弯条件后才切换到弯道。
-int speed_corner_confirm_frames = 2;
+int speed_corner_confirm_frames = 3;
 
 // 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
@@ -234,9 +237,9 @@ void speed_decision_reset(void)
 // 每个新图像帧调用一次：更新状态机，再用快减慢加生成最终速度指令。
 void speed_decision_update(void)
 {
-  int16 error_near;       // 近处中线相对图像中心的有符号偏差，单位：像素。
+  int16 error_weighted;   // 加权中线相对图像中心的有符号偏差，单位：像素。
   int16 error_far;        // 远处中线相对图像中心的有符号偏差，单位：像素。
-  float line_error;       // 远近偏差绝对值中的较大者，单位：像素。
+  float line_error;       // 加权与远点偏差绝对值中的较大者，单位：像素。
   float target_speed;     // 当前状态对应的目标速度，单位：cm/s。
   float accel_step;       // 检查为非负数后的本帧加速步长，单位：cm/s。
   float decel_step;       // 检查为非负数后的本帧减速步长，单位：cm/s。
@@ -250,10 +253,10 @@ void speed_decision_update(void)
     return;
   }
 
-  // 读取本帧远近图像偏差，使用绝对值较大的一项判断弯道。
-  error_near = steer_error_near;
+  // 读取本帧加权与远点图像偏差，使用绝对值较大的一项判断弯道。
+  error_weighted = steer_error_weighted;
   error_far = steer_error_far;
-  line_error = speed_abs_float((float)error_near);
+  line_error = speed_abs_float((float)error_weighted);
   if (speed_abs_float((float)error_far) > line_error)
     line_error = speed_abs_float((float)error_far);
 
@@ -437,19 +440,20 @@ void speed_decision_update(void)
 }
 #endif
 
-// 每个新图像帧调用一次：视觉PD外环根据单一横向偏差生成期望角速度。
-// error_far只保留给速度状态判断使用，本版方向控制不使用远近点之差。
-void steering_set_image_error(int16 error_near, int16 error_far, float image_dt_s)
+// 每个新图像帧调用一次：加权偏差用于主反馈，远点与加权偏差之差用于预瞄前馈。
+// error_weighted是多行加权结果，不是严格几何近点，因此前馈量按预瞄增量而非远近两点斜率处理。
+void steering_set_image_error(int16 error_weighted, int16 error_far, float image_dt_s)
 {
   float dt;               // 检查范围后的实际图像周期，单位s。
   float raw_error_rate;   // 本帧横向偏差变化速度，单位pixel/s。
-  float filter_tau;       // 视觉D项一阶低通时间常数，单位s。
-  float filter_alpha;     // 视觉D项低通中上一结果所占比例。
+  float raw_preview_error;// 本帧远点相对加权偏差的预瞄增量，单位pixel。
+  float filter_tau;       // 视觉微分和预瞄前馈共用的一阶低通时间常数，单位s。
+  float filter_alpha;     // 一阶低通中上一结果所占比例。
   float yaw_limit;        // 检查为非负数后的期望角速度限幅，单位deg/s。
-  float yaw_ref;          // 本帧视觉PD计算出的期望角速度，单位deg/s。
-  float image_error;      // 本帧用于方向控制的单一中线偏差，单位pixel。
+  float yaw_ref;          // 本帧视觉反馈与预瞄前馈合成的期望角速度，单位deg/s。
+  float image_error;      // 本帧用于主反馈的加权中线偏差，单位pixel。
 
-  steer_error_near = error_near;
+  steer_error_weighted = error_weighted;
   steer_error_far = error_far;
 
   // 使用真实帧间隔计算微分；首帧和异常间隔不产生微分冲击。
@@ -459,27 +463,33 @@ void steering_set_image_error(int16 error_near, int16 error_far, float image_dt_
     dt = VISION_DEFAULT_DT_S;
   }
 
+  raw_preview_error = (float)error_far - (float)error_weighted;
+  filter_tau = 1.0f / (2.0f * 3.14159265359f * VISION_D_FILTER_HZ);
+  filter_alpha = filter_tau / (filter_tau + dt);
+
   if (vision_last_error_valid)
   {
-    raw_error_rate = ((float)error_near - (float)vision_last_image_error) / dt;
-    filter_tau = 1.0f / (2.0f * 3.14159265359f * VISION_D_FILTER_HZ);
-    filter_alpha = filter_tau / (filter_tau + dt);
+    raw_error_rate = ((float)error_weighted - (float)vision_last_weighted_error) / dt;
     vision_error_rate_filter = filter_alpha * vision_error_rate_filter +
                                (1.0f - filter_alpha) * raw_error_rate;
+    vision_preview_error_filter = filter_alpha * vision_preview_error_filter +
+                                  (1.0f - filter_alpha) * raw_preview_error;
   }
   else
   {
     vision_error_rate_filter = 0.0f;
+    vision_preview_error_filter = raw_preview_error;
     vision_last_error_valid = true;
   }
 
-  vision_last_image_error = error_near;
+  vision_last_weighted_error = error_weighted;
   vision_last_image_tick = g_sys_tick;
 
   yaw_limit = (yaw_rate_limit_dps >= 0.0f) ?
               yaw_rate_limit_dps : -yaw_rate_limit_dps;
-  image_error = (float)error_near;
+  image_error = (float)error_weighted;
   yaw_ref = vision_yaw_kp * image_error +
+            vision_yaw_kff * vision_preview_error_filter +
             vision_yaw_kd * vision_error_rate_filter;
   yaw_rate_ref_dps = motor_limit_float(yaw_ref, -yaw_limit, yaw_limit);
 }
@@ -520,8 +530,9 @@ void steering_control_update(void)
   } else {
     yaw_rate_ref_dps = 0.0f;
     yaw_rate_error_dps = 0.0f;
-    vision_last_image_error = 0;
+    vision_last_weighted_error = 0;
     vision_error_rate_filter = 0.0f;
+    vision_preview_error_filter = 0.0f;
     vision_last_error_valid = false;
     vision_last_image_tick = g_sys_tick;
     steer_last_output = 0.0f;
@@ -604,10 +615,11 @@ void motor_pid_reset(void)
     errl_k1 = errl_k2 = 0;
     errr_k1 = errr_k2 = 0;
     control_effortl = control_effortr = 0;
-    steer_error_near = 0;
+    steer_error_weighted = 0;
     steer_error_far = 0;
-    vision_last_image_error = 0;
+    vision_last_weighted_error = 0;
     vision_error_rate_filter = 0.0f;
+    vision_preview_error_filter = 0.0f;
     vision_last_error_valid = false;
     vision_last_image_tick = g_sys_tick;
     yaw_rate_ref_dps = 0.0f;
