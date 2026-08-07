@@ -57,16 +57,13 @@
 #define IMAGE_MENU_ZEBRA_JUMP_Y    (7 * 16)  // zebra_jump是图像菜单第8项，对应第7行
 #define IMAGE_MENU_ZEBRA_ROWS_Y    (8 * 16)  // zebra_rows是图像菜单第9项，对应第8行
 #define IMAGE_MENU_ZEBRA_STATE_Y   (9 * 16)  // zebra_state是图像菜单第10项，对应第9行
-#define ZEBRA_DETECT_ROW            74       // 在检测窗口中间第74行统计斑马线跳变
-#define ZEBRA_DETECT_ROW_START      70       // 多行检测起始行
-#define ZEBRA_DETECT_ROW_END        78       // 多行检测结束行，共检查70~78九行
-#define ZEBRA_PATTERN_REQUIRED       6       // 每行至少找到6次“白黑黑”才算该行满足条件
-#define ZEBRA_MATCH_ROW_REQUIRED     3       // 九行中至少三行满足，当前帧才算斑马线候选
-#define ZEBRA_CONFIRM_FRAMES         1       // 单帧已有多行校验；避免高速时斑马线越过窄检测区而漏检
+#define ZEBRA_CHECK_ROWS              3       // 参考库：检查图像底部119、118、117三行
+#define ZEBRA_GUARD_OFFSET           30       // 参考库：距底30行处须同时存在左右边界
+#define ZEBRA_PATTERN_REQUIRED        4       // 参考库：任一检测行至少出现4次“白黑黑”
 #define ZEBRA_RELEASE_FRAMES         5       // 通过后连续五帧无候选，才允许检测下一条
 #define ZEBRA_STOP_COUNT             2       // 累计检测到第2条斑马线后停车
 #define ZEBRA_STATE_SEARCH           0       // 状态0：等待斑马线候选
-#define ZEBRA_STATE_CONFIRM          1       // 状态1：连续帧确认斑马线
+#define ZEBRA_STATE_CONFIRM          1       // 状态1：确认到斑马线入口
 #define ZEBRA_STATE_PASSING          2       // 状态2：本条已计数，等待完全离开
 #define STEER_CENTER_COL      (MT9V03X_W / 2)
 #define STEER_NEAR_ROW_START  60
@@ -95,13 +92,12 @@ int image_proc_ms = 0;                          // 一次图像处理从开始�
 int image_fps = 0;                              // 实际处理帧率，fps
 int image_wait_count = 0;                       // 检查时摄像头还没给新帧的次数，持续增加代表摄像头FPS低于检查节拍
 int zebra_cross_count = 0;                      // 本次运行已经通过的斑马线数量，达到2后停车
-int zebra_transition_count = 0;                 // 当前二值图第74行找到的“白黑黑”次数，用于菜单观察
+int zebra_transition_count = 0;                 // 底部三行中单行“白黑黑”次数的最大值
 static bool zebra_detect_latched = false;       // 当前斑马线是否已计数，防止同一条斑马线被连续多帧重复累计
 static uint8 zebra_release_frame_count = 0;     // 状态2中斑马线候选连续消失的帧数
 
-int zebra_match_row_count = 0;                  // 70~78行中“白黑黑”次数达到6的行数
+int zebra_match_row_count = 0;                  // 底部三行中“白黑黑”次数达到4的行数
 int zebra_state = ZEBRA_STATE_SEARCH;           // 斑马线状态机：0等待、1确认、2通过
-static uint8 zebra_confirm_frame_count = 0;     // 状态1中连续满足多行条件的图像帧数
 
 static uint32 image_ms_to_ticks(int ms)
 {
@@ -211,46 +207,49 @@ static bool track_lost_detect(void)
   return (bad_count >= TRACK_LOST_COUNT_TH);
 }
 
-// 从指定行的图像中心分别向左、向右搜索“白、黑、黑”像素序列。
-// 只有白色后面至少连续两个黑色像素才计一次，可滤掉单个黑色噪点。
+// 参考Track_sweep.c：从左到右统计单行“白、黑、黑”模式。
 static int zebra_count_row_patterns(uint8 row)
 {
-  int pattern_count = 0;                    // 本行左右两侧累计的“白黑黑”次数
-  uint16 center_col = MT9V03X_W / 2;        // 图像中心列，左右搜索都从这里开始
+  int pattern_count = 0;
 
-  // 从中心向左搜索：col+1是内侧白点，col和col-1是向外连续的两个黑点。
-  for (int16 col = (int16)center_col - 1; col >= 1; col--) {
-    if (twovalues_image[row][col + 1] == 255 &&
-        twovalues_image[row][col] == 0 &&
-        twovalues_image[row][col - 1] == 0) {
+  for (uint16 col = 0; col < MT9V03X_W - 2; col++) {
+    if (twovalues_image[row][col] == 255 &&
+        twovalues_image[row][col + 1] == 0 &&
+        twovalues_image[row][col + 2] == 0) {
       pattern_count++;
     }
   }
-
-  // 从中心向右搜索：col-1是内侧白点，col和col+1是向外连续的两个黑点。
-  for (uint16 col = center_col; col < MT9V03X_W - 1; col++) {
-    if (twovalues_image[row][col - 1] == 255 &&
-        twovalues_image[row][col] == 0 &&
-        twovalues_image[row][col + 1] == 0) {
-      pattern_count++;
-    }
-  }
-
   return pattern_count;
 }
 
-// 检查70~78行，返回其中“白黑黑”次数达到6的行数。
-// 多行同时满足可以排除普通赛道中只影响一两行的边缘噪点。
+// 参考库使用距底30行的双边有效性作为保护条件，防止出界黑区误识别。
+static bool zebra_guard_boundaries_valid(void)
+{
+  uint8 guard_row = (uint8)(MT9V03X_H - 1 - ZEBRA_GUARD_OFFSET);
+
+  return (left_line[guard_row] > 2 &&
+          right_line[guard_row] < MT9V03X_W - 3 &&
+          left_line[guard_row] < right_line[guard_row]);
+}
+
+// 参考库检查底部三行：任意一行WBB次数达到4，当前帧即为斑马线候选。
 static int zebra_count_matching_rows(void)
 {
-  int matching_rows = 0;  // 当前帧满足“白黑黑”次数条件的行数
+  int matching_rows = 0;
+  int max_pattern_count = 0;
 
-  for (uint8 row = ZEBRA_DETECT_ROW_START; row <= ZEBRA_DETECT_ROW_END; row++) {
-    if (zebra_count_row_patterns(row) >= ZEBRA_PATTERN_REQUIRED) {
+  for (uint8 i = 0; i < ZEBRA_CHECK_ROWS; i++) {
+    uint8 row = (uint8)(MT9V03X_H - 1 - i);
+    int pattern_count = zebra_count_row_patterns(row);
+    if (pattern_count > max_pattern_count) {
+      max_pattern_count = pattern_count;
+    }
+    if (pattern_count >= ZEBRA_PATTERN_REQUIRED) {
       matching_rows++;
     }
   }
 
+  zebra_transition_count = max_pattern_count;
   return matching_rows;
 }
 
@@ -258,17 +257,15 @@ static int zebra_count_matching_rows(void)
 // 返回true表示刚确认到第2条斑马线，主循环应立即执行停车保护。
 static bool zebra_state_process(void)
 {
-  bool zebra_candidate;  // 当前帧是否有至少三行满足跳变条件
+  bool zebra_candidate;
 
-  zebra_transition_count = zebra_count_row_patterns(ZEBRA_DETECT_ROW);
   zebra_match_row_count = zebra_count_matching_rows();
-  zebra_candidate = (zebra_match_row_count >= ZEBRA_MATCH_ROW_REQUIRED);
+  zebra_candidate = (zebra_match_row_count > 0 && zebra_guard_boundaries_valid());
 
   // 停车时保留跳变次数和匹配行数供观察，但状态机不累计。
   if (base_speed <= 0) {
     zebra_detect_latched = false;
     zebra_state = ZEBRA_STATE_SEARCH;
-    zebra_confirm_frame_count = 0;
     zebra_release_frame_count = 0;
     return false;
   }
@@ -291,26 +288,16 @@ static bool zebra_state_process(void)
     return false;
   }
 
-  // 状态0：普通赛道或候选中断时，清空确认帧数重新等待。
+  // 状态0：普通赛道或保护条件不满足时继续等待。
   if (!zebra_candidate) {
     zebra_state = ZEBRA_STATE_SEARCH;
-    zebra_confirm_frame_count = 0;
     return false;
   }
 
-  // 状态1：九行中至少三行满足。空间上的多行一致性已经完成抗噪确认。
+  // 参考库在候选首次出现时立即报告入口；随后锁存，避免连续帧重复计数。
   zebra_state = ZEBRA_STATE_CONFIRM;
-  if (zebra_confirm_frame_count < ZEBRA_CONFIRM_FRAMES) {
-    zebra_confirm_frame_count++;
-  }
-  if (zebra_confirm_frame_count < ZEBRA_CONFIRM_FRAMES) {
-    return false;
-  }
-
-  // 确认完成后只累计一次，随后进入状态2等待这条斑马线离开。
   zebra_detect_latched = true;
   zebra_state = ZEBRA_STATE_PASSING;
-  zebra_confirm_frame_count = 0;
   zebra_release_frame_count = 0;
   if (zebra_cross_count < ZEBRA_STOP_COUNT) {
     zebra_cross_count++;
@@ -416,7 +403,6 @@ int main(void) {
       zebra_detect_latched = false;   // 清除上次运行留下的斑马线锁存状态
       zebra_match_row_count = 0;      // 清除上次停车时保留的匹配行数
       zebra_state = ZEBRA_STATE_SEARCH; // 状态机回到等待斑马线状态
-      zebra_confirm_frame_count = 0;  // 清除连续确认帧数
       zebra_release_frame_count = 0;  // 清除斑马线离开帧计数
       ips200_show_string(0, 288, "RUNNING          ");
     } else if (base_speed <= 0 && last_base_speed > 0) {
@@ -456,6 +442,12 @@ int main(void) {
       memcpy(base_image, mt9v03x_image, sizeof(base_image));
       current_threshold = otsu_threshold(base_image);
       set_image_twovalues(current_threshold);
+      find_base_point();
+      step = STEP_BOUNDARY;
+      break;
+    case STEP_BOUNDARY:
+      find_boundary();
+      // 参考库先完成本帧边界搜索，再用row89双边有效性保护底部三行WBB检测。
       if (zebra_state_process()) {
         car_stop_protect();
         ips200_show_string(0, 288, "ZEBRA STOP      ");
@@ -463,7 +455,6 @@ int main(void) {
         break;
       }
       if (menu_is_image_page()) {
-        // 图像菜单不整体重画，这里实时刷新斑马线调试数据。
         ips200_show_int(IMAGE_MENU_ZEBRA_VALUE_X, IMAGE_MENU_ZEBRA_COUNT_Y,
                         zebra_cross_count, 3);
         ips200_show_int(IMAGE_MENU_ZEBRA_VALUE_X, IMAGE_MENU_ZEBRA_JUMP_Y,
@@ -473,11 +464,6 @@ int main(void) {
         ips200_show_int(IMAGE_MENU_ZEBRA_VALUE_X, IMAGE_MENU_ZEBRA_STATE_Y,
                         zebra_state, 3);
       }
-      find_base_point();
-      step = STEP_BOUNDARY;
-      break;
-    case STEP_BOUNDARY:
-      find_boundary();
       cross_state_process();  // 普通边线搜索后执行十字检测与补线
       if (menu_is_image_page()) {
         // 菜单整体只在按键动作时重画，这里单独实时刷新cross状态，

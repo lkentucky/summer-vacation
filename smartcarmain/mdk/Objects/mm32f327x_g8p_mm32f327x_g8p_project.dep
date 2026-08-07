@@ -1,5 +1,5 @@
 Dependencies for Project 'mm32f327x_g8p', Target 'mm32f327x_g8p_project': (DO NOT MODIFY !)
-F (..\USER\src\main.c)(0x6A7580CE)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+F (..\USER\src\main.c)(0x6A758496)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
 I (..\..\libraries\zf_common\zf_common_headfile.h)(0x6A5A1203)
 I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x6025237E)
 I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x60252374)
@@ -199,7 +199,7 @@ I (C:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x6025237C)
 I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x6025237E)
 I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x6025237E)
 I (C:\Keil_v5\ARM\ARMCC\include\stdlib.h)(0x60252374)
-F (..\user\src\mymenu.c)(0x6A75809D)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\mymenu.o --omf_browse .\objects\mymenu.crf --depend .\objects\mymenu.d)
+F (..\user\src\mymenu.c)(0x6A758460)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\mymenu.o --omf_browse .\objects\mymenu.crf --depend .\objects\mymenu.d)
 I (..\user\inc\mymenu.h)(0x6A718E0B)
 I (..\user\inc\menu.h)(0x6A560687)
 I (C:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x6025237C)
@@ -320,7 +320,7 @@ I (..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h)(0x65E996B4)
 I (..\..\libraries\sdk\CMSIS\Include\cmsis_armcc.h)(0x65E996B4)
 I (..\..\libraries\sdk\mm32f3277g_features.h)(0x65E996B4)
 I (..\..\libraries\sdk\system_mm32f3277g.h)(0x65E996B4)
-F (..\user\src\motor.c)(0x6A757B13)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\motor.o --omf_browse .\objects\motor.crf --depend .\objects\motor.d)
+F (..\user\src\motor.c)(0x6A758B35)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\motor.o --omf_browse .\objects\motor.crf --depend .\objects\motor.d)
 I (..\user\inc\motor.h)(0x6A756F7E)
 I (..\..\libraries\zf_common\zf_common_headfile.h)(0x6A5A1203)
 I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x6025237E)

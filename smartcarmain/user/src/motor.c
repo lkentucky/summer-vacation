@@ -90,7 +90,7 @@ float SPEED_EXIT_LINE_PX= (10.0f);
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 290;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
-int speed_corner_speed = 230;
+int speed_corner_speed = 235;
 // 直道使用原来的角速度反馈方向/比例。
 float speed_straight_yaw_feedback_sign = -1.01f;  //-1.01
 // 弯道降低角速度反馈比例，避免影响弯道响应。

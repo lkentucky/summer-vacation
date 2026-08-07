@@ -22,8 +22,8 @@ extern int image_proc_ms;
 extern int image_fps;
 extern int image_wait_count;
 extern int zebra_cross_count;       // 本次运行已经通过的斑马线数量
-extern int zebra_transition_count;  // 当前第74行找到的“白黑黑”次数
-extern int zebra_match_row_count;   // 70~78行中“白黑黑”次数达到6的行数
+extern int zebra_transition_count;  // 底部三行中单行“白黑黑”次数的最大值
+extern int zebra_match_row_count;   // 底部三行中“白黑黑”次数达到4的行数
 extern int zebra_state;             // 斑马线状态：0等待、1确认、2通过
 
 void Init_menu(void) {
