@@ -56,6 +56,8 @@ extern int speed_straight_speed;          // 直道目标速度，单位cm/s
 extern int speed_corner_speed;            // 弯道目标速度，单位cm/s
 extern float speed_straight_yaw_feedback_sign; // 直道角速度反馈方向/比例
 extern float speed_corner_yaw_feedback_sign;   // 弯道角速度反馈方向/比例
+extern float speed_straight_yaw_rate_kp;       // 直道/出弯稳定阶段角速度内环P系数
+extern float speed_corner_yaw_rate_kp;         // 弯道角速度内环P系数
 extern float speed_straight_vision_kp;         // 直道/出弯稳定阶段视觉外环P系数
 extern float speed_corner_vision_kp;           // 弯道视觉外环P系数
 extern float speed_oscillation_gyro_threshold; // 摆动检测的最小有效角速度绝对值，单位deg/s

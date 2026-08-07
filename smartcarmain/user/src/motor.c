@@ -34,7 +34,7 @@ int run_base_speed = 280; //250// 菜单可调的启动/巡线速度，K4 启动
 float vision_yaw_kp = 4.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
-// 角速度内环P系数：每1deg/s角速度误差产生多少cm/s左右轮差速修正。
+// 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
 int yaw_rate_limit_dps = 180;
@@ -92,6 +92,10 @@ int speed_corner_speed = 232;
 float speed_straight_yaw_feedback_sign = -1.01f;  //-1.01
 // 弯道降低角速度反馈比例，避免影响弯道响应。
 float speed_corner_yaw_feedback_sign = -0.40f;//-0.40
+// 直道/出弯稳定阶段的角速度内环P系数。
+float speed_straight_yaw_rate_kp = 1.00f;
+// 弯道的角速度内环P系数。
+float speed_corner_yaw_rate_kp = 1.53f;
 // 直道/出弯稳定阶段直接使用的视觉外环P系数。
 float speed_straight_vision_kp = 4.0f;
 // 弯道直接使用的视觉外环P系数。
@@ -211,6 +215,7 @@ void speed_decision_reset(void)
 
   speed_state = SPEED_STATE_STRAIGHT;      // 起步直接使用直道状态。
   yaw_rate_feedback_sign = speed_straight_yaw_feedback_sign; // 复位时同步使用直道反馈值。
+  yaw_rate_kp = speed_straight_yaw_rate_kp; // 复位时同步使用直道角速度内环P系数。
   vision_yaw_kp = speed_straight_vision_kp; // 复位时同步使用直道视觉P系数。
   speed_straight_frame_count = 0;         // 清除之前累计的直道帧。
   speed_corner_frame_count = 0;           // 清除之前累计的弯道帧。
@@ -399,11 +404,13 @@ void speed_decision_update(void)
       speed_state == SPEED_STATE_OSCILLATION || speed_exit_stabilizing)
   {
     yaw_rate_feedback_sign = speed_straight_yaw_feedback_sign;
+    yaw_rate_kp = speed_straight_yaw_rate_kp;
     vision_yaw_kp = speed_straight_vision_kp;
   }
   else
   {
     yaw_rate_feedback_sign = speed_corner_yaw_feedback_sign;
+    yaw_rate_kp = speed_corner_yaw_rate_kp;
     vision_yaw_kp = speed_corner_vision_kp;
   }
 
