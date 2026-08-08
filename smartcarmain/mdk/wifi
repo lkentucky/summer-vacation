@@ -1,0 +1,481 @@
+#include "wifi_app.h"
+
+#include "IMU.h"
+#include "cross.h"
+#include "isr.h"
+#include "motor.h"
+#include "zf_device_wifi_uart.h"
+
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define WIFI_APP_RX_CHUNK_SIZE       (128)
+#define WIFI_APP_AT_LINE_SIZE        (64)
+#define WIFI_APP_COMMAND_SIZE        (128)
+#define WIFI_APP_TX_SIZE             (220)
+#define WIFI_APP_TELEMETRY_MS_MIN    (100)
+#define WIFI_APP_TELEMETRY_MS_MAX    (2000)
+
+uint8 wifi_app_ready = 0;
+uint8 wifi_app_client_connected = 0;
+int   wifi_app_telemetry_ms = WIFI_APP_TELEMETRY_MS_DEFAULT;
+
+extern int image_fps;
+extern int image_frame_ms;
+extern int zebra_cross_count;
+
+static uint8 wifi_app_stream_enabled = 1;
+static uint32 wifi_app_last_telemetry_tick = 0;
+static char wifi_app_at_line[WIFI_APP_AT_LINE_SIZE];
+static uint16 wifi_app_at_line_length = 0;
+static uint16 wifi_app_payload_remaining = 0;
+static char wifi_app_command[WIFI_APP_COMMAND_SIZE];
+static uint16 wifi_app_command_length = 0;
+
+typedef enum
+{
+    WIFI_PARAM_INT,
+    WIFI_PARAM_FLOAT
+} wifi_param_type_enum;
+
+typedef struct
+{
+    const char *name;
+    wifi_param_type_enum type;
+    void *address;
+    float minimum;
+    float maximum;
+} wifi_param_struct;
+
+static wifi_param_struct wifi_app_parameters[] =
+{
+    {"SPEED_KP",       WIFI_PARAM_FLOAT, &Kp,                               0.0f, 100.0f},
+    {"SPEED_KI",       WIFI_PARAM_FLOAT, &Ki,                               0.0f, 20.0f},
+    {"SPEED_KD",       WIFI_PARAM_FLOAT, &Kd,                               0.0f, 20.0f},
+    {"RUN_SPEED",      WIFI_PARAM_INT,   &run_base_speed,                   0.0f, 600.0f},
+    {"VISION_KP",      WIFI_PARAM_FLOAT, &vision_yaw_kp,                    0.0f, 20.0f},
+    {"VISION_KD",      WIFI_PARAM_FLOAT, &vision_yaw_kd,                    0.0f, 2.0f},
+    {"VISION_FF",      WIFI_PARAM_FLOAT, &vision_yaw_kff,                 -10.0f, 10.0f},
+    {"YAW_KP",         WIFI_PARAM_FLOAT, &yaw_rate_kp,                      0.0f, 10.0f},
+    {"YAW_SIGN",       WIFI_PARAM_FLOAT, &yaw_rate_feedback_sign,          -2.0f, 2.0f},
+    {"YAW_MAX",        WIFI_PARAM_INT,   &yaw_rate_limit_dps,               0.0f, 720.0f},
+#if SPEED_DECISION_ENABLE
+    {"STRAIGHT_SPEED", WIFI_PARAM_INT,   &speed_straight_speed,             0.0f, 600.0f},
+    {"CORNER_SPEED",   WIFI_PARAM_INT,   &speed_corner_speed,               0.0f, 600.0f},
+    {"STRAIGHT_VKP",   WIFI_PARAM_FLOAT, &speed_straight_vision_kp,         0.0f, 20.0f},
+    {"CORNER_VKP",     WIFI_PARAM_FLOAT, &speed_corner_vision_kp,           0.0f, 20.0f},
+    {"STRAIGHT_YKP",   WIFI_PARAM_FLOAT, &speed_straight_yaw_rate_kp,       0.0f, 10.0f},
+    {"CORNER_YKP",     WIFI_PARAM_FLOAT, &speed_corner_yaw_rate_kp,         0.0f, 10.0f},
+    {"ENTER_PX",       WIFI_PARAM_FLOAT, &SPEED_ENTER_LINE_PX,              0.0f, 94.0f},
+    {"EXIT_PX",        WIFI_PARAM_FLOAT, &SPEED_EXIT_LINE_PX,               0.0f, 94.0f},
+    {"ACCEL_STEP",     WIFI_PARAM_FLOAT, &speed_accel_step,                 0.0f, 100.0f},
+    {"DECEL_STEP",     WIFI_PARAM_FLOAT, &speed_decel_step,                 0.0f, 100.0f},
+#endif
+};
+
+static int32 wifi_app_round_tenths(float value)
+{
+    return (int32)(value * 10.0f + ((value >= 0.0f) ? 0.5f : -0.5f));
+}
+
+static void wifi_app_uppercase(char *text)
+{
+    while (*text != '\0')
+    {
+        *text = (char)toupper((unsigned char)*text);
+        text++;
+    }
+}
+
+static char *wifi_app_skip_spaces(char *text)
+{
+    while (*text == ' ' || *text == '\t') text++;
+    return text;
+}
+
+static void wifi_app_trim_end(char *text)
+{
+    size_t length = strlen(text);
+    while (length > 0 && (text[length - 1] == ' ' || text[length - 1] == '\t' ||
+                           text[length - 1] == '\r' || text[length - 1] == '\n'))
+    {
+        text[--length] = '\0';
+    }
+}
+
+static uint8 wifi_app_send(const char *text)
+{
+    uint32 length;
+
+    if (!wifi_app_ready || !wifi_app_client_connected || text == NULL) return 1;
+    length = (uint32)strlen(text);
+    if (length == 0) return 0;
+
+    if (wifi_uart_send_buffer_timeout((uint8 *)text, length, WIFI_APP_SEND_TIMEOUT_MS) != 0)
+    {
+        wifi_app_client_connected = 0;
+        return 1;
+    }
+    return 0;
+}
+
+static wifi_param_struct *wifi_app_find_parameter(const char *name)
+{
+    uint32 i;
+    for (i = 0; i < sizeof(wifi_app_parameters) / sizeof(wifi_app_parameters[0]); i++)
+    {
+        if (strcmp(name, wifi_app_parameters[i].name) == 0) return &wifi_app_parameters[i];
+    }
+    return NULL;
+}
+
+static void wifi_app_send_parameter(const wifi_param_struct *parameter)
+{
+    char response[80];
+
+    if (parameter->type == WIFI_PARAM_INT)
+    {
+        snprintf(response, sizeof(response), "P,%s=%d\n", parameter->name,
+                 *((int *)parameter->address));
+    }
+    else
+    {
+        float value = *((float *)parameter->address);
+        int32 value_x1000 = (int32)(value * 1000.0f + (value >= 0.0f ? 0.5f : -0.5f));
+        int32 absolute_value = (value_x1000 < 0) ? -value_x1000 : value_x1000;
+        snprintf(response, sizeof(response), "P,%s=%s%ld.%03ld\n", parameter->name,
+                 (value_x1000 < 0) ? "-" : "", (long)(absolute_value / 1000),
+                 (long)(absolute_value % 1000));
+    }
+    wifi_app_send(response);
+}
+
+static void wifi_app_send_status(void)
+{
+    char response[WIFI_APP_TX_SIZE];
+    int32 speed_l_x10 = wifi_app_round_tenths(real_speedl);
+    int32 speed_r_x10 = wifi_app_round_tenths(real_speedr);
+    int32 gyro_x10 = wifi_app_round_tenths(imu_gyro_z_dps_filter);
+
+    snprintf(response, sizeof(response),
+             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,stream=%d,rate=%d\n",
+             (base_speed > 0), base_speed, (long)speed_l_x10, (long)speed_r_x10,
+             (int)steering_get_image_error(), (long)gyro_x10, image_fps,
+#if SPEED_DECISION_ENABLE
+             speed_state,
+#else
+             0,
+#endif
+             wifi_app_stream_enabled, wifi_app_telemetry_ms);
+    wifi_app_send(response);
+}
+
+static void wifi_app_stop_car(void)
+{
+    base_speed = 0;
+    motor_pid_reset();
+    target_speedl = 0.0f;
+    target_speedr = 0.0f;
+    motorl_set_pwm(0);
+    motorr_set_pwm(0);
+    cross_state_reset();
+}
+
+static void wifi_app_start_car(void)
+{
+    wifi_app_stop_car();
+#if SPEED_DECISION_ENABLE
+    base_speed = speed_decision_speed;
+#else
+    base_speed = run_base_speed;
+#endif
+}
+
+static void wifi_app_set_parameter(char *arguments)
+{
+    char *name = wifi_app_skip_spaces(arguments);
+    char *value_text = name;
+    char *end;
+    float value;
+    wifi_param_struct *parameter;
+
+    while (*value_text != '\0' && *value_text != ' ' && *value_text != '\t') value_text++;
+    if (*value_text == '\0')
+    {
+        wifi_app_send("ERR,usage:SET NAME VALUE\n");
+        return;
+    }
+    *value_text = '\0';
+    value_text = wifi_app_skip_spaces(value_text + 1);
+    wifi_app_uppercase(name);
+
+    parameter = wifi_app_find_parameter(name);
+    if (parameter == NULL)
+    {
+        wifi_app_send("ERR,unknown parameter\n");
+        return;
+    }
+
+    value = strtof(value_text, &end);
+    end = wifi_app_skip_spaces(end);
+    if (end == value_text || *end != '\0')
+    {
+        wifi_app_send("ERR,invalid value\n");
+        return;
+    }
+    if (value < parameter->minimum || value > parameter->maximum)
+    {
+        wifi_app_send("ERR,out of range\n");
+        return;
+    }
+
+    if (parameter->type == WIFI_PARAM_INT)
+        *((int *)parameter->address) = (int)value;
+    else
+        *((float *)parameter->address) = value;
+
+    wifi_app_send_parameter(parameter);
+}
+
+static void wifi_app_get_parameter(char *arguments)
+{
+    char *name = wifi_app_skip_spaces(arguments);
+    wifi_param_struct *parameter;
+
+    wifi_app_trim_end(name);
+    wifi_app_uppercase(name);
+    if (*name == '\0')
+    {
+        wifi_app_send_status();
+        return;
+    }
+
+    parameter = wifi_app_find_parameter(name);
+    if (parameter == NULL)
+        wifi_app_send("ERR,unknown parameter\n");
+    else
+        wifi_app_send_parameter(parameter);
+}
+
+static void wifi_app_process_command(char *command)
+{
+    char *arguments;
+    char *space;
+
+    wifi_app_trim_end(command);
+    command = wifi_app_skip_spaces(command);
+    if (*command == '\0') return;
+
+    space = command;
+    while (*space != '\0' && *space != ' ' && *space != '\t') space++;
+    arguments = space;
+    if (*space != '\0')
+    {
+        *space = '\0';
+        arguments = wifi_app_skip_spaces(space + 1);
+    }
+    wifi_app_uppercase(command);
+
+    if (strcmp(command, "PING") == 0)
+        wifi_app_send("OK,PONG\n");
+    else if (strcmp(command, "STATUS") == 0)
+        wifi_app_send_status();
+    else if (strcmp(command, "GET") == 0)
+        wifi_app_get_parameter(arguments);
+    else if (strcmp(command, "SET") == 0)
+        wifi_app_set_parameter(arguments);
+    else if (strcmp(command, "START") == 0)
+    {
+        wifi_app_start_car();
+        wifi_app_send("OK,START\n");
+    }
+    else if (strcmp(command, "STOP") == 0)
+    {
+        wifi_app_stop_car();
+        wifi_app_send("OK,STOP\n");
+    }
+    else if (strcmp(command, "STREAM") == 0)
+    {
+        wifi_app_uppercase(arguments);
+        if (strcmp(arguments, "ON") == 0)
+        {
+            wifi_app_stream_enabled = 1;
+            wifi_app_send("OK,STREAM=ON\n");
+        }
+        else if (strcmp(arguments, "OFF") == 0)
+        {
+            wifi_app_stream_enabled = 0;
+            wifi_app_send("OK,STREAM=OFF\n");
+        }
+        else
+            wifi_app_send("ERR,usage:STREAM ON|OFF\n");
+    }
+    else if (strcmp(command, "RATE") == 0)
+    {
+        char *end;
+        long period = strtol(arguments, &end, 10);
+        end = wifi_app_skip_spaces(end);
+        if (end == arguments || *end != '\0' ||
+            period < WIFI_APP_TELEMETRY_MS_MIN || period > WIFI_APP_TELEMETRY_MS_MAX)
+            wifi_app_send("ERR,RATE range 100..2000ms\n");
+        else
+        {
+            char response[40];
+            wifi_app_telemetry_ms = (int)period;
+            snprintf(response, sizeof(response), "OK,RATE=%d\n", wifi_app_telemetry_ms);
+            wifi_app_send(response);
+        }
+    }
+    else if (strcmp(command, "HELP") == 0)
+        wifi_app_send("CMD:PING STATUS GET [NAME] SET NAME VALUE START STOP STREAM ON|OFF RATE 100..2000\n");
+    else
+        wifi_app_send("ERR,unknown command; send HELP\n");
+}
+
+static void wifi_app_feed_payload_byte(char byte)
+{
+    if (byte == '\r') return;
+    if (byte == '\n')
+    {
+        wifi_app_command[wifi_app_command_length] = '\0';
+        wifi_app_process_command(wifi_app_command);
+        wifi_app_command_length = 0;
+        return;
+    }
+
+    if (wifi_app_command_length < WIFI_APP_COMMAND_SIZE - 1)
+        wifi_app_command[wifi_app_command_length++] = byte;
+    else
+        wifi_app_command_length = 0;
+}
+
+static uint16 wifi_app_parse_ipd_length(const char *header)
+{
+    const char *last_comma;
+    char *end;
+    long length;
+
+    if (strncmp(header, "+IPD,", 5) != 0) return 0;
+    last_comma = strrchr(header, ',');
+    if (last_comma == NULL) return 0;
+    length = strtol(last_comma + 1, &end, 10);
+    if (end == last_comma + 1 || *end != ':' || length <= 0 || length > 1024) return 0;
+    return (uint16)length;
+}
+
+static void wifi_app_process_transport_byte(char byte)
+{
+    if (wifi_app_payload_remaining > 0)
+    {
+        wifi_app_feed_payload_byte(byte);
+        wifi_app_payload_remaining--;
+        if (wifi_app_payload_remaining == 0 && wifi_app_command_length > 0)
+        {
+            wifi_app_command[wifi_app_command_length] = '\0';
+            wifi_app_process_command(wifi_app_command);
+            wifi_app_command_length = 0;
+        }
+        return;
+    }
+
+    if (wifi_app_at_line_length < WIFI_APP_AT_LINE_SIZE - 1)
+        wifi_app_at_line[wifi_app_at_line_length++] = byte;
+    else
+        wifi_app_at_line_length = 0;
+
+    if (byte == ':')
+    {
+        wifi_app_at_line[wifi_app_at_line_length] = '\0';
+        wifi_app_payload_remaining = wifi_app_parse_ipd_length(wifi_app_at_line);
+        wifi_app_at_line_length = 0;
+    }
+    else if (byte == '\n')
+    {
+        wifi_app_at_line[wifi_app_at_line_length] = '\0';
+        if (strstr(wifi_app_at_line, ",CLOSED") != NULL)
+            wifi_app_client_connected = 0;
+        else if (strstr(wifi_app_at_line, ",CONNECT") != NULL)
+        {
+            wifi_app_client_connected = 1;
+            wifi_app_last_telemetry_tick = g_sys_tick;
+        }
+        wifi_app_at_line_length = 0;
+    }
+}
+
+static void wifi_app_receive(void)
+{
+    uint8 buffer[WIFI_APP_RX_CHUNK_SIZE];
+    uint16 length;
+    uint16 i;
+
+    do
+    {
+        length = wifi_uart_read_buffer(buffer, sizeof(buffer));
+        for (i = 0; i < length; i++) wifi_app_process_transport_byte((char)buffer[i]);
+    } while (length == sizeof(buffer));
+}
+
+static void wifi_app_send_telemetry(void)
+{
+    char telemetry[WIFI_APP_TX_SIZE];
+    int32 target_l_x10 = wifi_app_round_tenths(target_speedl);
+    int32 target_r_x10 = wifi_app_round_tenths(target_speedr);
+    int32 speed_l_x10 = wifi_app_round_tenths(real_speedl);
+    int32 speed_r_x10 = wifi_app_round_tenths(real_speedr);
+    int32 gyro_x10 = wifi_app_round_tenths(imu_gyro_z_dps_filter);
+    int32 yaw_ref_x10 = wifi_app_round_tenths(yaw_rate_ref_dps);
+
+    snprintf(telemetry, sizeof(telemetry),
+             "T,t=%lu,run=%d,b=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,g10=%ld,yr10=%ld,fps=%d,fms=%d,st=%d,cr=%u,zb=%d\n",
+             (unsigned long)(g_sys_tick * SYS_TICK_MS), (base_speed > 0), base_speed,
+             (long)target_l_x10, (long)target_r_x10, (long)speed_l_x10, (long)speed_r_x10,
+             (int)steering_get_image_error(), (long)gyro_x10, (long)yaw_ref_x10,
+             image_fps, image_frame_ms,
+#if SPEED_DECISION_ENABLE
+             speed_state,
+#else
+             0,
+#endif
+             (unsigned int)cross_state, zebra_cross_count);
+    wifi_app_send(telemetry);
+}
+
+uint8 wifi_app_init(void)
+{
+#if WIFI_APP_ENABLE
+    wifi_app_ready = 0;
+    wifi_app_client_connected = 0;
+    wifi_app_stream_enabled = 1;
+    wifi_app_telemetry_ms = WIFI_APP_TELEMETRY_MS_DEFAULT;
+
+    if (wifi_uart_init(WIFI_APP_AP_SSID, WIFI_APP_AP_PASSWORD, WIFI_UART_SOFTAP)) return 1;
+    if (wifi_uart_entry_tcp_servers(WIFI_APP_TCP_PORT)) return 1;
+
+    wifi_app_ready = 1;
+    wifi_app_last_telemetry_tick = g_sys_tick;
+    return 0;
+#else
+    return 1;
+#endif
+}
+
+void wifi_app_process(void)
+{
+#if WIFI_APP_ENABLE
+    uint32 period_ticks;
+
+    if (!wifi_app_ready) return;
+    wifi_app_receive();
+
+    if (!wifi_app_client_connected || !wifi_app_stream_enabled) return;
+    period_ticks = (uint32)((wifi_app_telemetry_ms + SYS_TICK_MS - 1) / SYS_TICK_MS);
+    if ((g_sys_tick - wifi_app_last_telemetry_tick) >= period_ticks)
+    {
+        wifi_app_last_telemetry_tick = g_sys_tick;
+        wifi_app_send_telemetry();
+    }
+#endif
+}

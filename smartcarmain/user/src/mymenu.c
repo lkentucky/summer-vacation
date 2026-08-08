@@ -264,19 +264,16 @@ void key_3_double(void) {
 }
 
 void key_4_double(void) {
-  motor_pid_reset();
-  target_speedl = 0.0f;
-  target_speedr = 0.0f;
+  uint8 was_running = (joystick_control_active || base_speed != 0);
 
-  if (base_speed == 0) {
+  motor_joystick_stop();
+  if (!was_running) {
 #if SPEED_DECISION_ENABLE
-    // motor_pid_reset已把速度指令复位到起步值，避免先写入run_speed形成瞬时高速尖峰。
+    // motor_joystick_stop已复位速度决策，避免启动瞬间出现速度尖峰。
     base_speed = speed_decision_speed;
 #else
     base_speed = run_base_speed;
 #endif
-  } else {
-    base_speed = 0;
   }
 }
 

@@ -35,6 +35,16 @@ extern float target_speedr;  // 右轮目标速度
 
 extern int base_speed;       // 当前运行速度，0 表示停车
 extern int run_base_speed;   // 菜单可调的启动/巡线速度
+// 蓝牙摇杆遥控：输入范围-100..100，单轮最大速度200cm/s（2m/s）。
+#define JOYSTICK_MAX_SPEED_CM_S (200.0f)
+#define JOYSTICK_TURN_RATIO     (0.25f)
+#define JOYSTICK_TIMEOUT_MS     (300U)
+#define JOYSTICK_DEADZONE       (5)
+extern volatile uint8 joystick_control_active;
+extern volatile int joystick_turn_percent;
+extern volatile int joystick_forward_percent;
+void motor_joystick_set(int turn_percent, int forward_percent);
+void motor_joystick_stop(void);
 extern float vision_yaw_kp;           // 视觉外环P系数，单位(deg/s)/pixel
 extern float vision_yaw_kd;           // 视觉外环D系数，单位deg/pixel
 extern float vision_yaw_kff;          // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel
@@ -86,6 +96,7 @@ void init_encoder(void);
 void get_motor_speed(void);
 // 每个图像帧更新视觉外环；error_weighted为加权偏差，image_dt_s为真实帧间隔。
 void steering_set_image_error(int16 error_weighted, int16 error_far, float image_dt_s);
+int16 steering_get_image_error(void); // 读取最近一帧加权中线偏差，供无线遥测使用。
 // 每10ms执行角速度内环，根据期望角速度和IMU角速度更新左右轮目标速度。
 void steering_control_update(void);
 void motor_pid_speedcontrol(void);

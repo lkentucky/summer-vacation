@@ -30,6 +30,12 @@ float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
 int run_base_speed = 280; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
+volatile uint8 joystick_control_active = 0;
+volatile int joystick_turn_percent = 0;
+volatile int joystick_forward_percent = 0;
+static volatile float joystick_target_speedl = 0.0f;
+static volatile float joystick_target_speedr = 0.0f;
+static volatile uint32 joystick_last_packet_tick = 0;
 // 视觉外环P系数：每1像素横向偏差产生多少期望角速度，单位(deg/s)/pixel。
 float vision_yaw_kp = 4.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
@@ -494,10 +500,74 @@ void steering_set_image_error(int16 error_weighted, int16 error_far, float image
   yaw_rate_ref_dps = motor_limit_float(yaw_ref, -yaw_limit, yaw_limit);
 }
 
+int16 steering_get_image_error(void)
+{
+  return steer_error_weighted;
+}
+
+void motor_joystick_stop(void)
+{
+  joystick_control_active = 0;
+  joystick_turn_percent = 0;
+  joystick_forward_percent = 0;
+  joystick_target_speedl = 0.0f;
+  joystick_target_speedr = 0.0f;
+  base_speed = 0;
+  target_speedl = 0.0f;
+  target_speedr = 0.0f;
+  motor_pid_reset();
+  motorl_set_pwm(0);
+  motorr_set_pwm(0);
+}
+
+void motor_joystick_set(int turn_percent, int forward_percent)
+{
+  float forward_speed;
+  float turn_speed;
+
+  if (turn_percent > 100) turn_percent = 100;
+  if (turn_percent < -100) turn_percent = -100;
+  if (forward_percent > 100) forward_percent = 100;
+  if (forward_percent < -100) forward_percent = -100;
+  if (turn_percent >= -JOYSTICK_DEADZONE && turn_percent <= JOYSTICK_DEADZONE) turn_percent = 0;
+  if (forward_percent >= -JOYSTICK_DEADZONE && forward_percent <= JOYSTICK_DEADZONE) forward_percent = 0;
+
+  if (!joystick_control_active) motor_pid_reset();
+  base_speed = 0; // 摇杆模式绕过视觉巡线和自动速度决策。
+  joystick_turn_percent = turn_percent;
+  joystick_forward_percent = forward_percent;
+  forward_speed = (float)forward_percent * (JOYSTICK_MAX_SPEED_CM_S / 100.0f);
+  turn_speed = (float)turn_percent * (JOYSTICK_MAX_SPEED_CM_S / 100.0f) * JOYSTICK_TURN_RATIO;
+  // 负转向：左轮减速、右轮加速，车辆左转；正转向反之。
+  joystick_target_speedl = motor_limit_float(forward_speed + turn_speed,
+                                              -JOYSTICK_MAX_SPEED_CM_S,
+                                               JOYSTICK_MAX_SPEED_CM_S);
+  joystick_target_speedr = motor_limit_float(forward_speed - turn_speed,
+                                              -JOYSTICK_MAX_SPEED_CM_S,
+                                               JOYSTICK_MAX_SPEED_CM_S);
+  joystick_last_packet_tick = g_sys_tick;
+  joystick_control_active = 1;
+}
 // 由TIM6每10ms分频调用：角速度P内环跟踪视觉外环给出的期望角速度。
 // 本函数不处理图像、不读取IMU硬件，只使用主循环已经更新的期望值和陀螺仪滤波值。
 void steering_control_update(void)
 {
+  if (joystick_control_active)
+  {
+    if ((g_sys_tick - joystick_last_packet_tick) >=
+        (JOYSTICK_TIMEOUT_MS + SYS_TICK_MS - 1U) / SYS_TICK_MS)
+    {
+      motor_joystick_stop();
+      return;
+    }
+    yaw_rate_ref_dps = 0.0f;
+    yaw_rate_error_dps = 0.0f;
+    steer_last_output = 0.0f;
+    target_speedl = joystick_target_speedl;
+    target_speedr = joystick_target_speedr;
+    return;
+  }
+
   if (base_speed > 0) {
     float yaw_ref = yaw_rate_ref_dps; // 本次内环使用的期望角速度，单位deg/s。
     float yaw_rate_measured;          // 修正安装方向后的实际角速度，单位deg/s。

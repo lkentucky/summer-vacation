@@ -431,6 +431,11 @@
               <FileType>1</FileType>
               <FilePath>..\user\src\IMU.c</FilePath>
             </File>
+            <File>
+              <FileName>bluetooth_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\src\bluetooth_app.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -450,6 +455,11 @@
               <FileName>cross.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\user\inc\cross.h</FilePath>
+            </File>
+            <File>
+              <FileName>bluetooth_app.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\user\inc\bluetooth_app.h</FilePath>
             </File>
           </Files>
         </Group>

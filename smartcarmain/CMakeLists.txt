@@ -42,6 +42,11 @@ set(USER_SOURCES
     ${USER_SRC_DIR}/mymenu.c
     ${USER_SRC_DIR}/key.c
     ${USER_SRC_DIR}/IMU.c
+    ${USER_SRC_DIR}/motor.c
+    ${USER_SRC_DIR}/image.c
+    ${USER_SRC_DIR}/cross.c
+    ${USER_SRC_DIR}/calculation.c
+    ${USER_SRC_DIR}/bluetooth_app.c
 )
 
 file(GLOB ZFC_SOURCES  "${LIB_ROOT}/zf_common/*.c")

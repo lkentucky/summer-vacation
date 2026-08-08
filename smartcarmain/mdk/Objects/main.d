@@ -97,3 +97,4 @@
 .\objects\main.o: ..\user\inc\isr.h
 .\objects\main.o: ..\user\inc\cross.h
 .\objects\main.o: ..\user\inc\IMU.h
+.\objects\main.o: ..\user\inc\bluetooth_app.h

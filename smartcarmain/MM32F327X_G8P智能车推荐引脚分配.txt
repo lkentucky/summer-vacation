@@ -46,11 +46,10 @@ IPS200屏幕
 	SAO/SDO		B14		<单片机的 SPI2 MISO>
 	CS			B12
 
-无线转串口模块 UART6
-	RX			C6		<单片机的 UART6 TX>
-	TX			C7		<单片机的 UART6 RX>
-	RTS			C13
-
+HC-04双模蓝牙 UART6（裸模块使用3.3V供电）
+	RXD			C6			<单片机的 UART6 TX>
+	TXD			C7			<单片机的 UART6 RX>
+	未使用		C13		<当前保持空闲，未接STATE>
 红孩儿CCD
 	AO			B0		<单片机的 ADC1_CH8>
 	AO			B1		<单片机的 ADC1_CH9>

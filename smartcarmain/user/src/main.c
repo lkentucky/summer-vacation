@@ -39,6 +39,7 @@
 #include "image.h"
 #include "cross.h"
 #include "IMU.h"
+#include "bluetooth_app.h"
 #include <string.h>
 #include <stdbool.h>
 // **************************** 代码区域 ****************************
@@ -309,10 +310,7 @@ static bool zebra_state_process(void)
 
 static void car_stop_protect(void)
 {
-  base_speed = 0;
-  target_speedl = 0.0f;
-  target_speedr = 0.0f;
-  motor_pid_reset();
+  motor_joystick_stop();
 }
 
 int main(void) {
@@ -347,6 +345,15 @@ int main(void) {
   motor_init();  // 初始化电机控制引脚和PWM输出
   init_encoder();  // 初始化编码器
 
+  ips200_show_string(0, 304, "bt init...    ");
+  if (bluetooth_app_init()) {
+    ips200_show_string(0, 304, "bt fail       ");
+  } else if (bluetooth_app_baud == BLUETOOTH_APP_TARGET_BAUD) {
+    ips200_show_string(0, 304, "bt 115200 ok  ");
+  } else {
+    ips200_show_string(0, 304, "bt 9600 ok    ");
+  }
+
   key_state_reset();   // 复位按键状态（热复位兼容）
   motor_pid_reset();   // 复位PID积分（热复位兼容）
   pit_ms_init(TIM6_PIT, 2);   // TIM6: 速度PID每2ms，转向环在中断内分频为10ms。
@@ -373,6 +380,8 @@ int main(void) {
       last_imu_tick = g_sys_tick;
       imu_update();
     }
+
+    bluetooth_app_process(); // 处理HC-04透明串口命令，并按低频短包发送遥测。
 
     if (g_sys_tick - last_key_tick >= 2) {
       last_key_tick = g_sys_tick;
