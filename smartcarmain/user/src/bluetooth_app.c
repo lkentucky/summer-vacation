@@ -38,6 +38,7 @@ static char bluetooth_app_command[BLUETOOTH_APP_COMMAND_SIZE];
 static uint16 bluetooth_app_command_length = 0;
 static volatile uint32 bluetooth_app_last_rx_tick = 0;
 static uint8 bluetooth_app_stream_enabled = 0;
+static uint8 bluetooth_app_plot_enabled = 0;
 static uint32 bluetooth_app_last_telemetry_tick = 0;
 
 typedef enum
@@ -248,7 +249,7 @@ static void bluetooth_app_send_status(void)
 {
     char response[BLUETOOTH_APP_TX_SIZE];
     snprintf(response, sizeof(response),
-             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,stream=%d,rate=%d,baud=%lu\n",
+             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,stream=%d,draw=%d,rate=%d,baud=%lu\n",
              (base_speed > 0 || joystick_control_active), base_speed,
              (long)bluetooth_app_round_tenths(real_speedl),
              (long)bluetooth_app_round_tenths(real_speedr),
@@ -259,7 +260,7 @@ static void bluetooth_app_send_status(void)
 #else
              0,
 #endif
-             bluetooth_app_stream_enabled, bluetooth_app_telemetry_ms,
+             bluetooth_app_stream_enabled, bluetooth_app_plot_enabled, bluetooth_app_telemetry_ms,
              (unsigned long)bluetooth_app_baud);
     bluetooth_app_send(response);
 }
@@ -440,6 +441,23 @@ static void bluetooth_app_process_command(char *command)
         else
             bluetooth_app_send("ERR,usage:STREAM ON|OFF\n");
     }
+    else if (strcmp(command, "DRAW") == 0)
+    {
+        bluetooth_app_uppercase(arguments);
+        if (*arguments == '\0' || strcmp(arguments, "ON") == 0)
+        {
+            bluetooth_app_plot_enabled = 1;
+            bluetooth_app_stream_enabled = 1;
+            bluetooth_app_send("OK,DRAW=ON\n");
+        }
+        else if (strcmp(arguments, "OFF") == 0)
+        {
+            bluetooth_app_plot_enabled = 0;
+            bluetooth_app_send("OK,DRAW=OFF\n");
+        }
+        else
+            bluetooth_app_send("ERR,usage:DRAW [ON|OFF]\n");
+    }
     else if (strcmp(command, "RATE") == 0)
     {
         char *end;
@@ -457,7 +475,7 @@ static void bluetooth_app_process_command(char *command)
         }
     }
     else if (strcmp(command, "HELP") == 0)
-        bluetooth_app_send("CMD:PING STATUS GET [NAME] SET NAME VALUE START STOP STREAM ON|OFF RATE 100..2000 [joystick,x,y,x,x]\n");
+        bluetooth_app_send("CMD:PING STATUS GET [NAME] SET NAME VALUE START STOP STREAM ON|OFF DRAW [ON|OFF] RATE 100..2000 [joystick,x,y,x,x]\n");
     else
         bluetooth_app_send("ERR,unknown command; send HELP\n");
 }
@@ -507,6 +525,19 @@ static void bluetooth_app_receive(void)
 static void bluetooth_app_send_telemetry(void)
 {
     char telemetry[BLUETOOTH_APP_TX_SIZE];
+
+    if (bluetooth_app_plot_enabled)
+    {
+#if SPEED_DECISION_ENABLE
+        snprintf(telemetry, sizeof(telemetry), "[plot,%d,%u]", speed_state,
+                 (unsigned int)cross_state);
+#else
+        snprintf(telemetry, sizeof(telemetry), "[plot,0,%u]",
+                 (unsigned int)cross_state);
+#endif
+        bluetooth_app_send(telemetry);
+        return;
+    }
     snprintf(telemetry, sizeof(telemetry),
              "B,t=%lu,run=%d,b=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,g10=%ld,yr10=%ld,fps=%d,fms=%d,st=%d,cr=%u,zb=%d\n",
              (unsigned long)(g_sys_tick * SYS_TICK_MS), (base_speed > 0 || joystick_control_active), base_speed,
@@ -532,6 +563,7 @@ uint8 bluetooth_app_init(void)
     bluetooth_app_ready = 0;
     bluetooth_app_connected = 0;
     bluetooth_app_stream_enabled = 0;
+    bluetooth_app_plot_enabled = 0;
     bluetooth_app_telemetry_ms = BLUETOOTH_APP_TELEMETRY_MS_DEFAULT;
     bluetooth_app_rx_head = 0;
     bluetooth_app_rx_tail = 0;

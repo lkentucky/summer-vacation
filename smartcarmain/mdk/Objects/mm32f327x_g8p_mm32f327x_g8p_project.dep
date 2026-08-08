@@ -321,7 +321,7 @@ I (..\..\libraries\sdk\CMSIS\Include\cmsis_compiler.h)(0x65E996B4)
 I (..\..\libraries\sdk\CMSIS\Include\cmsis_armcc.h)(0x65E996B4)
 I (..\..\libraries\sdk\mm32f3277g_features.h)(0x65E996B4)
 I (..\..\libraries\sdk\system_mm32f3277g.h)(0x65E996B4)
-F (..\user\src\motor.c)(0x6A7703BC)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\motor.o --omf_browse .\objects\motor.crf --depend .\objects\motor.d)
+F (..\user\src\motor.c)(0x6A77080D)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\motor.o --omf_browse .\objects\motor.crf --depend .\objects\motor.d)
 I (..\user\inc\motor.h)(0x6A7703BC)
 I (..\..\libraries\zf_common\zf_common_headfile.h)(0x6A5A1203)
 I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x6025237E)
@@ -803,7 +803,7 @@ I (..\user\inc\image.h)(0x6A684137)
 I (..\user\inc\calculation.h)(0x6A65CBB9)
 I (..\user\inc\isr.h)(0x6A61C6D2)
 I (C:\Keil_v5\ARM\ARMCC\include\math.h)(0x60252378)
-F (..\user\src\bluetooth_app.c)(0x6A76ED75)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\bluetooth_app.o --omf_browse .\objects\bluetooth_app.crf --depend .\objects\bluetooth_app.d)
+F (..\user\src\bluetooth_app.c)(0x6A770C17)(--c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I ..\user\inc -I ..\code -I ..\..\libraries\zf_common -I ..\..\libraries\zf_device -I ..\..\libraries\zf_driver -I ..\..\libraries\sdk -I ..\..\libraries\sdk\CMSIS\Include -I ..\..\libraries\sdk\drivers -I ..\..\libraries\components\fatfs\source-I.\RTE\_mm32f327x_g8p_project-IC:\Keil_v5\ARM\PACK\MindMotion\MM32F3270_DFP\1.0.5\Device\MM32F327x\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="525" -DMM32F3273G8P-o .\objects\bluetooth_app.o --omf_browse .\objects\bluetooth_app.crf --depend .\objects\bluetooth_app.d)
 I (..\user\inc\bluetooth_app.h)(0x6A76E4B2)
 I (..\..\libraries\zf_common\zf_common_typedef.h)(0x65E996B4)
 I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x60252374)

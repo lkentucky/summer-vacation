@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\MM32F327X_G8P.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\MM32F327X_G8P.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Sat Aug 08 18:26:28 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Sat Aug 08 19:00:29 2026
 <BR><P>
 <H3>Maximum Stack Usage =       1140 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -1321,7 +1321,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[161]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;key_handle
 </UL>
 
-<P><STRONG><a name="[c9]"></a>bluetooth_app_init</STRONG> (Thumb, 96 bytes, Stack size 8 bytes, bluetooth_app.o(i.bluetooth_app_init))
+<P><STRONG><a name="[c9]"></a>bluetooth_app_init</STRONG> (Thumb, 100 bytes, Stack size 8 bytes, bluetooth_app.o(i.bluetooth_app_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 720<LI>Call Chain = bluetooth_app_init &rArr; bluetooth_app_configure_uart &rArr; bluetooth_app_uart_start &rArr; uart_init &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_uart_start
@@ -1332,7 +1332,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[cb]"></a>bluetooth_app_process</STRONG> (Thumb, 92 bytes, Stack size 16 bytes, bluetooth_app.o(i.bluetooth_app_process))
-<BR><BR>[Stack]<UL><LI>Max Depth = 1096<LI>Call Chain = bluetooth_app_process &rArr; bluetooth_app_receive &rArr; bluetooth_app_process_command &rArr; bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
+<BR><BR>[Stack]<UL><LI>Max Depth = 1104<LI>Call Chain = bluetooth_app_process &rArr; bluetooth_app_receive &rArr; bluetooth_app_process_command &rArr; bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_send_telemetry
 <LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_receive
@@ -3055,7 +3055,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[c2]"></a>bluetooth_app_get_parameter</STRONG> (Thumb, 62 bytes, Stack size 16 bytes, bluetooth_app.o(i.bluetooth_app_get_parameter))
-<BR><BR>[Stack]<UL><LI>Max Depth = 1000<LI>Call Chain = bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
+<BR><BR>[Stack]<UL><LI>Max Depth = 1008<LI>Call Chain = bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_uppercase
 <LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_trim_end
@@ -3068,8 +3068,8 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_process_command
 </UL>
 
-<P><STRONG><a name="[ce]"></a>bluetooth_app_process_command</STRONG> (Thumb, 446 bytes, Stack size 72 bytes, bluetooth_app.o(i.bluetooth_app_process_command))
-<BR><BR>[Stack]<UL><LI>Max Depth = 1072<LI>Call Chain = bluetooth_app_process_command &rArr; bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
+<P><STRONG><a name="[ce]"></a>bluetooth_app_process_command</STRONG> (Thumb, 526 bytes, Stack size 72 bytes, bluetooth_app.o(i.bluetooth_app_process_command))
+<BR><BR>[Stack]<UL><LI>Max Depth = 1080<LI>Call Chain = bluetooth_app_process_command &rArr; bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_joystick_stop
 <LI><a href="#[c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_uppercase
@@ -3104,7 +3104,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[cc]"></a>bluetooth_app_receive</STRONG> (Thumb, 220 bytes, Stack size 8 bytes, bluetooth_app.o(i.bluetooth_app_receive))
-<BR><BR>[Stack]<UL><LI>Max Depth = 1080<LI>Call Chain = bluetooth_app_receive &rArr; bluetooth_app_process_command &rArr; bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
+<BR><BR>[Stack]<UL><LI>Max Depth = 1088<LI>Call Chain = bluetooth_app_receive &rArr; bluetooth_app_process_command &rArr; bluetooth_app_get_parameter &rArr; bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_rx_pop
 <LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_process_command
@@ -3173,8 +3173,8 @@ Local Symbols
 <LI><a href="#[c2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_get_parameter
 </UL>
 
-<P><STRONG><a name="[c6]"></a>bluetooth_app_send_status</STRONG> (Thumb, 126 bytes, Stack size 280 bytes, bluetooth_app.o(i.bluetooth_app_send_status))
-<BR><BR>[Stack]<UL><LI>Max Depth = 984<LI>Call Chain = bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
+<P><STRONG><a name="[c6]"></a>bluetooth_app_send_status</STRONG> (Thumb, 132 bytes, Stack size 288 bytes, bluetooth_app.o(i.bluetooth_app_send_status))
+<BR><BR>[Stack]<UL><LI>Max Depth = 992<LI>Call Chain = bluetooth_app_send_status &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_send
 <LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_round_tenths
@@ -3185,7 +3185,7 @@ Local Symbols
 <LI><a href="#[c2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_get_parameter
 </UL>
 
-<P><STRONG><a name="[cd]"></a>bluetooth_app_send_telemetry</STRONG> (Thumb, 172 bytes, Stack size 312 bytes, bluetooth_app.o(i.bluetooth_app_send_telemetry))
+<P><STRONG><a name="[cd]"></a>bluetooth_app_send_telemetry</STRONG> (Thumb, 208 bytes, Stack size 312 bytes, bluetooth_app.o(i.bluetooth_app_send_telemetry))
 <BR><BR>[Stack]<UL><LI>Max Depth = 1016<LI>Call Chain = bluetooth_app_send_telemetry &rArr; bluetooth_app_send &rArr; uart_write_buffer &rArr; debug_assert_handler &rArr; debug_output &rArr; __2sprintf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;bluetooth_app_send
