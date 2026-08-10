@@ -94,4 +94,3 @@
 .\objects\calculation.o: ..\user\inc\menu.h
 .\objects\calculation.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\calculation.o: ..\user\inc\image.h
-.\objects\calculation.o: ..\user\inc\calculation.h

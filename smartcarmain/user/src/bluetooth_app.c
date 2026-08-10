@@ -2,6 +2,7 @@
 
 #include "IMU.h"
 #include "cross.h"
+#include "image.h"
 #include "isr.h"
 #include "motor.h"
 #include "zf_device_type.h"
@@ -62,23 +63,16 @@ static bluetooth_param_struct bluetooth_app_parameters[] =
     {"SPEED_KI",       BLUETOOTH_PARAM_FLOAT, &Ki,                               0.0f, 20.0f},
     {"SPEED_KD",       BLUETOOTH_PARAM_FLOAT, &Kd,                               0.0f, 20.0f},
     {"RUN_SPEED",      BLUETOOTH_PARAM_INT,   &run_base_speed,                   0.0f, 600.0f},
-    {"VISION_KP",      BLUETOOTH_PARAM_FLOAT, &vision_yaw_kp,                    0.0f, 20.0f},
-    {"VISION_KD",      BLUETOOTH_PARAM_FLOAT, &vision_yaw_kd,                    0.0f, 2.0f},
-    {"VISION_FF",      BLUETOOTH_PARAM_FLOAT, &vision_yaw_kff,                 -10.0f, 10.0f},
-    {"YAW_KP",         BLUETOOTH_PARAM_FLOAT, &yaw_rate_kp,                      0.0f, 10.0f},
-    {"YAW_SIGN",       BLUETOOTH_PARAM_FLOAT, &yaw_rate_feedback_sign,          -2.0f, 2.0f},
-    {"YAW_MAX",        BLUETOOTH_PARAM_INT,   &yaw_rate_limit_dps,               0.0f, 720.0f},
+    {"STEER_KP",       BLUETOOTH_PARAM_FLOAT, &steer_ppdd_kp,                    0.0f, 50.0f},
+    {"STEER_KD",       BLUETOOTH_PARAM_FLOAT, &steer_ppdd_kd,                    0.0f, 50.0f},
+    {"GYRO_K",         BLUETOOTH_PARAM_FLOAT, &steer_ppdd_gyro_k,               -5.0f, 5.0f},
+    {"WIDTH_K",        BLUETOOTH_PARAM_FLOAT, &mid_single_edge_width_scale,      0.7f, 1.3f},
 #if SPEED_DECISION_ENABLE
     {"STRAIGHT_SPEED", BLUETOOTH_PARAM_INT,   &speed_straight_speed,             0.0f, 600.0f},
+    {"MID_FAST_SPEED", BLUETOOTH_PARAM_INT,   &speed_mid_fast_speed,             0.0f, 600.0f},
+    {"MID_SLOW_SPEED", BLUETOOTH_PARAM_INT,   &speed_mid_slow_speed,             0.0f, 600.0f},
     {"CORNER_SPEED",   BLUETOOTH_PARAM_INT,   &speed_corner_speed,               0.0f, 600.0f},
-    {"STRAIGHT_VKP",   BLUETOOTH_PARAM_FLOAT, &speed_straight_vision_kp,         0.0f, 20.0f},
-    {"CORNER_VKP",     BLUETOOTH_PARAM_FLOAT, &speed_corner_vision_kp,           0.0f, 20.0f},
-    {"STRAIGHT_YKP",   BLUETOOTH_PARAM_FLOAT, &speed_straight_yaw_rate_kp,       0.0f, 10.0f},
-    {"CORNER_YKP",     BLUETOOTH_PARAM_FLOAT, &speed_corner_yaw_rate_kp,         0.0f, 10.0f},
-    {"ENTER_PX",       BLUETOOTH_PARAM_FLOAT, &SPEED_ENTER_LINE_PX,              0.0f, 94.0f},
-    {"EXIT_PX",        BLUETOOTH_PARAM_FLOAT, &SPEED_EXIT_LINE_PX,               0.0f, 94.0f},
-    {"ACCEL_STEP",     BLUETOOTH_PARAM_FLOAT, &speed_accel_step,                 0.0f, 100.0f},
-    {"DECEL_STEP",     BLUETOOTH_PARAM_FLOAT, &speed_decel_step,                 0.0f, 100.0f},
+    {"LAUNCH_FRAMES",  BLUETOOTH_PARAM_INT,   &speed_launch_frames,              0.0f, 200.0f},
 #endif
 };
 
@@ -249,12 +243,20 @@ static void bluetooth_app_send_status(void)
 {
     char response[BLUETOOTH_APP_TX_SIZE];
     snprintf(response, sizeof(response),
-             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,stream=%d,draw=%d,rate=%d,baud=%lu\n",
+             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,far=%d,spd_err=%d,level=%d,gyro10=%ld,out10=%ld,fps=%d,state=%d,stream=%d,draw=%d,rate=%d,baud=%lu\n",
              (base_speed > 0 || joystick_control_active), base_speed,
              (long)bluetooth_app_round_tenths(real_speedl),
              (long)bluetooth_app_round_tenths(real_speedr),
              (int)steering_get_image_error(),
-             (long)bluetooth_app_round_tenths(imu_gyro_z_dps_filter), image_fps,
+             (int)steering_get_far_error(),
+             (int)steering_get_speed_error(),
+#if SPEED_DECISION_ENABLE
+             speed_level,
+#else
+             0,
+#endif
+             (long)bluetooth_app_round_tenths(imu_gyro_z_dps_filter),
+             (long)bluetooth_app_round_tenths(steer_ppdd_output), image_fps,
 #if SPEED_DECISION_ENABLE
              speed_state,
 #else
@@ -539,15 +541,22 @@ static void bluetooth_app_send_telemetry(void)
         return;
     }
     snprintf(telemetry, sizeof(telemetry),
-             "B,t=%lu,run=%d,b=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,g10=%ld,yr10=%ld,fps=%d,fms=%d,st=%d,cr=%u,zb=%d\n",
+             "B,t=%lu,run=%d,b=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,ef=%d,se=%d,sl=%d,g10=%ld,out10=%ld,fps=%d,fms=%d,st=%d,cr=%u,zb=%d\n",
              (unsigned long)(g_sys_tick * SYS_TICK_MS), (base_speed > 0 || joystick_control_active), base_speed,
              (long)bluetooth_app_round_tenths(target_speedl),
              (long)bluetooth_app_round_tenths(target_speedr),
              (long)bluetooth_app_round_tenths(real_speedl),
              (long)bluetooth_app_round_tenths(real_speedr),
              (int)steering_get_image_error(),
+             (int)steering_get_far_error(),
+             (int)steering_get_speed_error(),
+#if SPEED_DECISION_ENABLE
+             speed_level,
+#else
+             0,
+#endif
              (long)bluetooth_app_round_tenths(imu_gyro_z_dps_filter),
-             (long)bluetooth_app_round_tenths(yaw_rate_ref_dps), image_fps, image_frame_ms,
+             (long)bluetooth_app_round_tenths(steer_ppdd_output), image_fps, image_frame_ms,
 #if SPEED_DECISION_ENABLE
              speed_state,
 #else

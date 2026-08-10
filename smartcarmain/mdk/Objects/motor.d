@@ -94,6 +94,5 @@
 .\objects\motor.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\motor.o: ..\user\inc\image.h
 .\objects\motor.o: ..\..\libraries\zf_common\zf_common_headfile.h
-.\objects\motor.o: ..\user\inc\calculation.h
 .\objects\motor.o: ..\user\inc\IMU.h
 .\objects\motor.o: ..\user\inc\isr.h

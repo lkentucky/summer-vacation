@@ -103,27 +103,36 @@ void TIM5_IRQHandler (void)
 volatile uint32 g_sys_tick = 0;
 #if MOTOR_PWM_TEST_ENABLE
 static bool motor_pwm_test_was_running = false; // 记录上一中断是否处于测试运行，用于每次启动清零累计计数。
-#else
-// TIM6每2ms进入一次；转向环5分频后每10ms更新，速度环仍每2ms更新。
-#define STEERING_CONTROL_DIVIDER (1U)
-// 首次TIM6中断立即更新转向，之后保持10ms间隔。
-static uint8 steering_control_divider = STEERING_CONTROL_DIVIDER - 1U;
 #endif
 void TIM6_IRQHandler (void)
 {
     g_sys_tick++;
+#if !MOTOR_PWM_TEST_ENABLE
+    /* PPDD本身只在新图像帧到来时计算（约10ms）；
+       此处只保持目标差速并处理摇杆/视觉超时，不重算方向误差。 */
+    steering_control_update();
+#endif
 
-    encoder_diffl = encoder_get_count(TIM3_ENCODER);  // 获取左轮编码器计数值
-    encoder_clear_count(TIM3_ENCODER);                // 清空左轮编码器计数值
-    motor_speedl = encoder_diffl / (SYS_TICK_SEC);   // 计算左轮速度，单位为脉冲数/秒
+    TIM6->SR &= ~TIM6->SR;
+}
 
-    encoder_diffr = encoder_get_count(TIM4_ENCODER);  // 获取右轮编码器计数值
-    encoder_clear_count(TIM4_ENCODER);                // 清空右轮编码器计数值
-    motor_speedr = encoder_diffr / (SYS_TICK_SEC);   // 计算右轮速度，单位为脉冲数/秒
-    get_motor_speed();                                 // 直通测试也换算速度，便于菜单核对编码器方向。
+//-------------------------------------------------------------------------------------------------------------------
+// 函数简介     TIM7 的定时器中断服务函数 启动 .s 文件定义 不允许修改函数名称
+//              默认优先级 修改优先级使用 interrupt_set_priority(TIM7_IRQn, 1);
+//-------------------------------------------------------------------------------------------------------------------
+void TIM7_IRQHandler (void)
+{
+    /* 参考库的速度环节拍：TIM7每5ms采样编码器并更新增量式PID。 */
+    encoder_diffl = encoder_get_count(TIM3_ENCODER);
+    encoder_clear_count(TIM3_ENCODER);
+    motor_speedl = (int)((float)encoder_diffl / 0.005f);
+
+    encoder_diffr = encoder_get_count(TIM4_ENCODER);
+    encoder_clear_count(TIM4_ENCODER);
+    motor_speedr = (int)((float)encoder_diffr / 0.005f);
+    get_motor_speed();
 
 #if MOTOR_PWM_TEST_ENABLE
-    // 电机测试模式完全绕过方向环和速度PID，只检查K4控制的启停状态。
     if (base_speed > 0)
     {
         if (!motor_pwm_test_was_running)
@@ -144,29 +153,8 @@ void TIM6_IRQHandler (void)
         motorr_set_pwm(0);
     }
 #else
-    if (++steering_control_divider >= STEERING_CONTROL_DIVIDER)
-    {
-        steering_control_divider = 0;
-        steering_control_update();                     // 2ms转向环：刷新左右轮目标速度.
-    }
-    
-    
-    motor_pid_speedcontrol();                          // 4ms速度PID：跟踪左右轮目标速度。
-    
+    motor_pid_speedcontrol();
 #endif
-
-    TIM6->SR &= ~TIM6->SR;
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-// 函数简介     TIM7 的定时器中断服务函数 启动 .s 文件定义 不允许修改函数名称
-//              默认优先级 修改优先级使用 interrupt_set_priority(TIM7_IRQn, 1);
-//-------------------------------------------------------------------------------------------------------------------
-void TIM7_IRQHandler (void)
-{
-    // 此处编写用户代码
-
-    // 此处编写用户代码
     TIM7->SR &= ~TIM7->SR;                                                      // 清空中断状态
 }
 

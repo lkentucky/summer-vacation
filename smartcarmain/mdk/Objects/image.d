@@ -1,5 +1,5 @@
 .\objects\image.o: ..\user\src\image.c
-.\objects\image.o: ..\user\inc\image.h 
+.\objects\image.o: ..\user\inc\image.h
 .\objects\image.o: ..\..\libraries\zf_common\zf_common_headfile.h
 .\objects\image.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\image.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
@@ -94,4 +94,4 @@
 .\objects\image.o: ..\user\inc\menu.h
 .\objects\image.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\image.o: ..\user\inc\image.h
-.\objects\image.o: ..\user\inc\calculation.h
+.\objects\image.o: ..\user\inc\cross.h

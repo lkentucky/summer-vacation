@@ -94,4 +94,3 @@
 .\objects\isr.o: ..\user\inc\menu.h
 .\objects\isr.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\isr.o: ..\user\inc\image.h
-.\objects\isr.o: ..\user\inc\calculation.h
