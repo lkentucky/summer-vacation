@@ -514,7 +514,10 @@ int main(void) {
     case STEP_STEER:
       // 主反馈是多行中线加权偏差；远点偏差用于生成低通后的预瞄前馈。
       // 加权偏差不等于单独近点，控制器内使用“远点-加权偏差”而非几何远近点斜率。
+      // 道路状态另用“远点-近点”判断；整条中线横向偏移不会再误判为弯道。
+      // 因此车身平行于直道时，即使小车不在赛道正中心，仍使用直道参数。
       steering_set_image_error((int16)mid_line_weighted_average() - STEER_CENTER_COL,
+                               get_mid_error_average(STEER_NEAR_ROW_START, STEER_NEAR_ROW_END),
                                get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END),
                                (float)image_frame_ms * 0.001f);
 #if SPEED_DECISION_ENABLE
@@ -547,6 +550,8 @@ int main(void) {
       ips200_show_string(108, 272, "fps " );
       ips200_show_int(142, 272, image_proc_ms, 2);
       ips200_show_string(160, 272, "ms");
+      ips200_show_string(0, 288, "TURN ERR ");
+      ips200_show_int(72, 288, steering_get_heading_error(), 3);
       step = STEP_IDLE;
       break;
     }

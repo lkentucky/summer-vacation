@@ -95,8 +95,10 @@ void motorr_set_pwm(int rpwm);
 void init_encoder(void);
 void get_motor_speed(void);
 // 每个图像帧更新视觉外环；error_weighted为加权偏差，image_dt_s为真实帧间隔。
-void steering_set_image_error(int16 error_weighted, int16 error_far, float image_dt_s);
+void steering_set_image_error(int16 error_weighted, int16 error_near,
+                              int16 error_far, float image_dt_s);
 int16 steering_get_image_error(void); // 读取最近一帧加权中线偏差，供无线遥测使用。
+int16 steering_get_heading_error(void); // 读取直道/弯道判断实际使用的远近点差值绝对值。
 // 每10ms执行角速度内环，根据期望角速度和IMU角速度更新左右轮目标速度。
 void steering_control_update(void);
 void motor_pid_speedcontrol(void);

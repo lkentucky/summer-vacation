@@ -41,7 +41,7 @@ float vision_yaw_kp = 4.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.40f;
+float vision_yaw_kff = 0.60f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
@@ -54,6 +54,7 @@ volatile float yaw_rate_ref_dps = 0.0f;
 volatile float yaw_rate_error_dps = 0.0f;
 
 static volatile int16 steer_error_weighted = 0; // 加权中线偏差，不是单独近点，由主循环按帧更新。
+static volatile int16 steer_error_near = 0;     // 60~65行近点中线平均偏差，用于计算车身航向。
 static volatile int16 steer_error_far = 0;      // 35~40行远点中线平均偏差，由主循环按帧更新。
 static int16 vision_last_weighted_error = 0;    // 上一图像帧的加权偏差，用于计算真实视觉微分。
 static float vision_error_rate_filter = 0.0f;      // 低通后的视觉误差变化速度，单位pixel/s。
@@ -81,6 +82,8 @@ static float motor_limit_float(float value, float min_value, float max_value)
  */
 
 // 直道状态下，最大中线偏差达到该值就判定入弯，单位：像素。
+// 注意：从本版本起，入弯/出弯阈值衡量的是abs(远点偏差-近点偏差)，不再是横向位置偏差。
+// 因此小车平行于直道但没有位于正中心时，仍会保留直道参数。
 float SPEED_ENTER_LINE_PX= (10.0f);
 // 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
 float SPEED_EXIT_LINE_PX= (10.0f);
@@ -112,7 +115,7 @@ float speed_corner_vision_kp = 6.8f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
 float speed_oscillation_gyro_threshold = 15.0f;
 // 在检测窗口内达到该换向次数后进入摆动抑制状态。
-int speed_oscillation_reversal_required = 20;
+int speed_oscillation_reversal_required = 3;
 // 当前速度状态；0是直道，1是弯道，复位时默认按直道处理。
 int speed_state = SPEED_STATE_STRAIGHT;
 // 最终提供给base_speed的整数速度指令，初始值为起步速度，单位：cm/s。
@@ -124,7 +127,7 @@ float speed_decel_step = 13.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
 int speed_straight_confirm_frames = 2;
 // 在直道状态下，连续满足多少帧入弯条件后才切换到弯道。
-int speed_corner_confirm_frames = 1;
+int speed_corner_confirm_frames = 2;
 
 // 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
@@ -247,6 +250,8 @@ void speed_decision_update(void)
   int16 error_far;        // 远处中线相对图像中心的有符号偏差，单位：像素。
   float line_error;       // 加权与远点偏差绝对值中的较大者，单位：像素。
   float target_speed;     // 当前状态对应的目标速度，单位：cm/s。
+  // 状态判定中沿用上述局部变量名，但error_weighted在下面存放近点偏差，
+  // line_error存放远近点差值（航向偏差），两者都不再表示距画面中心的绝对距离。
   float accel_step;       // 检查为非负数后的本帧加速步长，单位：cm/s。
   float decel_step;       // 检查为非负数后的本帧减速步长，单位：cm/s。
   int straight_speed;     // 检查为非负数后的直道速度，单位：cm/s。
@@ -260,11 +265,9 @@ void speed_decision_update(void)
   }
 
   // 读取本帧加权与远点图像偏差，使用绝对值较大的一项判断弯道。
-  error_weighted = steer_error_weighted;
+  error_weighted = steer_error_near;
   error_far = steer_error_far;
-  line_error = speed_abs_float((float)error_weighted);
-  if (speed_abs_float((float)error_far) > line_error)
-    line_error = speed_abs_float((float)error_far);
+  line_error = speed_abs_float((float)error_far - (float)error_weighted);
 
   // 约束菜单速度参数，保证：直道速度 >= 弯道速度 >= 0。
   straight_speed = speed_straight_speed;
@@ -448,7 +451,8 @@ void speed_decision_update(void)
 
 // 每个新图像帧调用一次：加权偏差用于主反馈，远点与加权偏差之差用于预瞄前馈。
 // error_weighted是多行加权结果，不是严格几何近点，因此前馈量按预瞄增量而非远近两点斜率处理。
-void steering_set_image_error(int16 error_weighted, int16 error_far, float image_dt_s)
+void steering_set_image_error(int16 error_weighted, int16 error_near,
+                              int16 error_far, float image_dt_s)
 {
   float dt;               // 检查范围后的实际图像周期，单位s。
   float raw_error_rate;   // 本帧横向偏差变化速度，单位pixel/s。
@@ -460,8 +464,8 @@ void steering_set_image_error(int16 error_weighted, int16 error_far, float image
   float image_error;      // 本帧用于主反馈的加权中线偏差，单位pixel。
 
   steer_error_weighted = error_weighted;
+  steer_error_near = error_near;
   steer_error_far = error_far;
-
   // 使用真实帧间隔计算微分；首帧和异常间隔不产生微分冲击。
   dt = image_dt_s;
   if (dt < VISION_MIN_DT_S || dt > VISION_MAX_DT_S)
@@ -503,6 +507,12 @@ void steering_set_image_error(int16 error_weighted, int16 error_far, float image
 int16 steering_get_image_error(void)
 {
   return steer_error_weighted;
+}
+
+int16 steering_get_heading_error(void)
+{
+  int16 heading_error = steer_error_far - steer_error_near;
+  return (heading_error < 0) ? -heading_error : heading_error;
 }
 
 void motor_joystick_stop(void)
@@ -686,6 +696,7 @@ void motor_pid_reset(void)
     errr_k1 = errr_k2 = 0;
     control_effortl = control_effortr = 0;
     steer_error_weighted = 0;
+    steer_error_near = 0;
     steer_error_far = 0;
     vision_last_weighted_error = 0;
     vision_error_rate_filter = 0.0f;
