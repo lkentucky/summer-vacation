@@ -73,6 +73,7 @@ static bluetooth_param_struct bluetooth_app_parameters[] =
     {"CORNER_SPEED",   BLUETOOTH_PARAM_INT,   &speed_corner_speed,               0.0f, 600.0f},
     {"STRAIGHT_VKP",   BLUETOOTH_PARAM_FLOAT, &speed_straight_vision_kp,         0.0f, 20.0f},
     {"CORNER_VKP",     BLUETOOTH_PARAM_FLOAT, &speed_corner_vision_kp,           0.0f, 20.0f},
+    {"CORNER_VKQ",     BLUETOOTH_PARAM_FLOAT, &speed_corner_vision_kq,           0.0f, 2.0f},
     {"STRAIGHT_YKP",   BLUETOOTH_PARAM_FLOAT, &speed_straight_yaw_rate_kp,       0.0f, 10.0f},
     {"CORNER_YKP",     BLUETOOTH_PARAM_FLOAT, &speed_corner_yaw_rate_kp,         0.0f, 10.0f},
     {"ENTER_PX",       BLUETOOTH_PARAM_FLOAT, &SPEED_ENTER_LINE_PX,              0.0f, 94.0f},

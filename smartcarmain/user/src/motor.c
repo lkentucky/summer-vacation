@@ -41,7 +41,7 @@ float vision_yaw_kp = 4.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.60f;
+float vision_yaw_kff = 0.65f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
@@ -84,9 +84,9 @@ static float motor_limit_float(float value, float min_value, float max_value)
 // 直道状态下，最大中线偏差达到该值就判定入弯，单位：像素。
 // 注意：从本版本起，入弯/出弯阈值衡量的是abs(远点偏差-近点偏差)，不再是横向位置偏差。
 // 因此小车平行于直道但没有位于正中心时，仍会保留直道参数。
-float SPEED_ENTER_LINE_PX= (10.0f);
+uint8 SPEED_ENTER_LINE_PX= (12);
 // 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
-float SPEED_EXIT_LINE_PX= (10.0f);
+uint8 SPEED_EXIT_LINE_PX= (8);
 // 角速度换向必须集中在该图像帧窗口内，才认为是快速左右摇摆。
 #define SPEED_OSCILLATION_WINDOW_FRAMES (10)
 // 摆动状态保持该帧数后进入直道，期间使用弯道安全速度和直道方向参数。
@@ -112,6 +112,8 @@ float speed_corner_yaw_rate_kp = 1.46f;
 float speed_straight_vision_kp = 4.0f;
 // 弯道直接使用的视觉外环P系数。
 float speed_corner_vision_kp = 6.8f;
+// 弯道视觉误差的保方向平方项系数：Kq * error * abs(error)。
+float speed_corner_vision_kq = 0.10f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
 float speed_oscillation_gyro_threshold = 15.0f;
 // 在检测窗口内达到该换向次数后进入摆动抑制状态。
@@ -127,7 +129,7 @@ float speed_decel_step = 13.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
 int speed_straight_confirm_frames = 2;
 // 在直道状态下，连续满足多少帧入弯条件后才切换到弯道。
-int speed_corner_confirm_frames = 2;
+int speed_corner_confirm_frames = 1;
 
 // 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
@@ -501,6 +503,14 @@ void steering_set_image_error(int16 error_weighted, int16 error_near,
   yaw_ref = vision_yaw_kp * image_error +
             vision_yaw_kff * vision_preview_error_filter +
             vision_yaw_kd * vision_error_rate_filter;
+#if SPEED_DECISION_ENABLE
+  // 平方项保留error符号，避免左右弯都产生同一方向的转向量；出弯稳定阶段不启用。
+  if (speed_state == SPEED_STATE_CORNER && !speed_exit_stabilizing)
+  {
+    yaw_ref += speed_corner_vision_kq * image_error *
+               ((image_error < 0.0f) ? -image_error : image_error);
+  }
+#endif
   yaw_rate_ref_dps = motor_limit_float(yaw_ref, -yaw_limit, yaw_limit);
 }
 

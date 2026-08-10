@@ -64,8 +64,8 @@ enum
 };
 
 
-extern float SPEED_ENTER_LINE_PX; // 进入弯道状态的最小偏差绝对值，单位pixel
-extern float SPEED_EXIT_LINE_PX;  // 退出弯道状态的最大偏差绝对值，单位pixel  
+extern uint8 SPEED_ENTER_LINE_PX; // 进入弯道状态的最小偏差绝对值，单位pixel
+extern uint8 SPEED_EXIT_LINE_PX;  // 退出弯道状态的最大偏差绝对值，单位pixel  
 extern int speed_straight_speed;          // 直道目标速度，单位cm/s
 extern int speed_corner_speed;            // 弯道目标速度，单位cm/s
 extern float speed_straight_yaw_feedback_sign; // 直道角速度反馈方向/比例
@@ -74,6 +74,7 @@ extern float speed_straight_yaw_rate_kp;       // 直道/出弯稳定阶段角�
 extern float speed_corner_yaw_rate_kp;         // 弯道角速度内环P系数
 extern float speed_straight_vision_kp;         // 直道/出弯稳定阶段视觉外环P系数
 extern float speed_corner_vision_kp;           // 弯道视觉外环P系数
+extern float speed_corner_vision_kq;           // 弯道视觉误差保方向平方项系数，单位(deg/s)/pixel^2
 extern float speed_oscillation_gyro_threshold; // 摆动检测的最小有效角速度绝对值，单位deg/s
 extern int speed_oscillation_reversal_required; // 窗口内触发摆动状态所需的角速度换向次数
 extern int speed_state;                   // 当前状态：0=直道，1=弯道，2=摆动抑制

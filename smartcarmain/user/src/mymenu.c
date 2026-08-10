@@ -40,6 +40,8 @@ void Init_menu(void) {
   MenuItem* pid_folder = dynamic_create_menu_folder(&head, "PID");
   motor_folder = dynamic_create_menu_folder(&head, "motor");
   MenuItem* xunxian_folder = dynamic_create_menu_folder(&head, "xunxian");
+  MenuItem* angle_loop_folder = dynamic_create_menu_folder(xunxian_folder, "angle_loop");
+  MenuItem* vision_loop_folder = dynamic_create_menu_folder(xunxian_folder, "vision_loop");
   image_folder = dynamic_create_menu_folder(&head, "image");
 
 
@@ -55,34 +57,36 @@ void Init_menu(void) {
   dynamic_create_menu_txt(motor_folder, "real_speedr", &real_speedr, float_box);
   dynamic_create_menu_txt(motor_folder, "enc_l_raw", (void *)&encoder_test_total_l, int32_box);
   dynamic_create_menu_txt(motor_folder, "enc_r_raw", (void *)&encoder_test_total_r, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "run_speed", &run_base_speed, int32_box);
   // 串级方向控制参数：视觉PD外环生成yaw_ref，角速度P内环跟踪yaw_ref。
-  dynamic_create_menu_txt(xunxian_folder, "vision_kd", &vision_yaw_kd, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "vision_ff", &vision_yaw_kff, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_max", &yaw_rate_limit_dps, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "vision_kd", &vision_yaw_kd, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "vision_ff", &vision_yaw_kff, float_box);
+  dynamic_create_menu_txt(angle_loop_folder, "yaw_max", &yaw_rate_limit_dps, int32_box);
+  dynamic_create_menu_txt(angle_loop_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
 #if SPEED_DECISION_ENABLE
   // 三状态速度决策菜单：spd_state中0=直道，1=弯道，2=摆动抑制。
- // dynamic_create_menu_txt(xunxian_folder, "spd_straight", &speed_straight_speed, int32_box);
- // dynamic_create_menu_txt(xunxian_folder, "spd_corner", &speed_corner_speed, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_str", &speed_straight_yaw_feedback_sign, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_cur", &speed_corner_yaw_feedback_sign, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "ykp_str", &speed_straight_yaw_rate_kp, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "ykp_cur", &speed_corner_yaw_rate_kp, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "kp_str", &speed_straight_vision_kp, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "kp_cur", &speed_corner_vision_kp, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "spd_state", &speed_state, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "spd_cmd", &speed_decision_speed, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "spd_up", &speed_accel_step, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "spd_down", &speed_decel_step, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "straight_n", &speed_straight_confirm_frames, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "corner_n", &speed_corner_confirm_frames, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "osc_n", &speed_oscillation_reversal_required, int32_box);
-  dynamic_create_menu_txt(xunxian_folder, "enter_px", &SPEED_ENTER_LINE_PX, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "exit_px", &SPEED_EXIT_LINE_PX, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_straight", &speed_straight_speed, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_corner", &speed_corner_speed, int32_box);
+  dynamic_create_menu_txt(angle_loop_folder, "yaw_str", &speed_straight_yaw_feedback_sign, float_box);
+  dynamic_create_menu_txt(angle_loop_folder, "yaw_cur", &speed_corner_yaw_feedback_sign, float_box);
+  dynamic_create_menu_txt(angle_loop_folder, "ykp_str", &speed_straight_yaw_rate_kp, float_box);
+  dynamic_create_menu_txt(angle_loop_folder, "ykp_cur", &speed_corner_yaw_rate_kp, float_box);
+  dynamic_create_menu_txt(angle_loop_folder, "gyro_th", &speed_oscillation_gyro_threshold, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "kp_str", &speed_straight_vision_kp, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "kp_cur", &speed_corner_vision_kp, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "kq_cur", &speed_corner_vision_kq, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_state", &speed_state, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_cmd", &speed_decision_speed, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_up", &speed_accel_step, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_down", &speed_decel_step, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "straight_n", &speed_straight_confirm_frames, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "corner_n", &speed_corner_confirm_frames, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "osc_n", &speed_oscillation_reversal_required, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "enter_px", &SPEED_ENTER_LINE_PX, uint8_box);
+  dynamic_create_menu_txt(vision_loop_folder, "exit_px", &SPEED_EXIT_LINE_PX, uint8_box);
 #else
-  dynamic_create_menu_txt(xunxian_folder, "vision_kp", &vision_yaw_kp, float_box);
-  dynamic_create_menu_txt(xunxian_folder, "yaw_kp", &yaw_rate_kp, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "run_speed", &run_base_speed, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "vision_kp", &vision_yaw_kp, float_box);
+  dynamic_create_menu_txt(angle_loop_folder, "yaw_kp", &yaw_rate_kp, float_box);
 #endif
   dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "frame_ms", &image_frame_ms, int32_box);
