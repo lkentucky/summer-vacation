@@ -41,7 +41,7 @@ float vision_yaw_kp = 6.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.48f;
+float vision_yaw_kff = 0.37f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
@@ -101,21 +101,21 @@ uint8 SPEED_EXIT_LINE_PX= (8);
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 290;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
-int speed_corner_speed = 230;
-// 直道使用原来的角速度反馈方向/比例。
-float speed_straight_yaw_feedback_sign = -1.01f;  //-1.01
-// 弯道降低角速度反馈比例，避免影响弯道响应。
-float speed_corner_yaw_feedback_sign = -0.46f;//-0.40
+int speed_corner_speed = 232;
+// 直道与弯道先共用实车验证通过的方向参数，使速度决策只改变目标速度。
+float speed_straight_yaw_feedback_sign = -0.47f;
+// 弯道IMU角速度反馈方向/比例。
+float speed_corner_yaw_feedback_sign = -0.47f;
 // 直道状态的角速度内环P系数。
-float speed_straight_yaw_rate_kp = 1.38f;
+float speed_straight_yaw_rate_kp = 1.53f;
 // 弯道的角速度内环P系数。
-float speed_corner_yaw_rate_kp = 1.46f;
+float speed_corner_yaw_rate_kp = 1.53f;
 // 直道状态直接使用的视觉外环P系数。
-float speed_straight_vision_kp = 4.0f;
+float speed_straight_vision_kp = 6.0f;
 // 弯道直接使用的视觉外环P系数。
-float speed_corner_vision_kp = 8.93f;
-// 弯道视觉误差的保方向平方项系数：Kq * error * abs(error)。
-float speed_corner_vision_kq = 0.24f;
+float speed_corner_vision_kp = 6.0f;
+// 当前实车参数是在关闭速度决策时验证的，当时平方项未参与；先置0保证弯道手感一致。
+float speed_corner_vision_kq = 0.0f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
 float speed_oscillation_gyro_threshold = 15.0f;
 // 出弯允许的最大角速度；车辆仍明显旋转时保持弯道方向参数。

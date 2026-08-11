@@ -9,7 +9,7 @@
 #define MOTORR_PWM TIM5_PWM_CH4_A3                         //右轮PWM
 
 // 速度决策总开关：1=启用速度决策，0=禁用并继续使用run_base_speed。
-#define SPEED_DECISION_ENABLE (0)
+#define SPEED_DECISION_ENABLE (1)
 // 新板电机直通测试：1=双击K4后两轮固定PWM，0=恢复正常串级方向环和速度PID。
 #define MOTOR_PWM_TEST_ENABLE  (0)
 // 电机直通测试的固定PWM绝对值；正数表示按当前正转方向运行。
