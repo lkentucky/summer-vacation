@@ -71,6 +71,7 @@ void Init_menu(void) {
   dynamic_create_menu_txt(angle_loop_folder, "ykp_str", &speed_straight_yaw_rate_kp, float_box);
   dynamic_create_menu_txt(angle_loop_folder, "ykp_cur", &speed_corner_yaw_rate_kp, float_box);
   dynamic_create_menu_txt(angle_loop_folder, "gyro_th", &speed_oscillation_gyro_threshold, float_box);
+  dynamic_create_menu_txt(angle_loop_folder, "exit_gyro", &speed_exit_gyro_threshold, float_box);
   dynamic_create_menu_txt(vision_loop_folder, "kp_str", &speed_straight_vision_kp, float_box);
   dynamic_create_menu_txt(vision_loop_folder, "kp_cur", &speed_corner_vision_kp, float_box);
   dynamic_create_menu_txt(vision_loop_folder, "kq_cur", &speed_corner_vision_kq, float_box);
@@ -87,6 +88,8 @@ void Init_menu(void) {
   dynamic_create_menu_txt(vision_loop_folder, "run_speed", &run_base_speed, int32_box);
   dynamic_create_menu_txt(vision_loop_folder, "vision_kp", &vision_yaw_kp, float_box);
   dynamic_create_menu_txt(angle_loop_folder, "yaw_kp", &yaw_rate_kp, float_box);
+  // 无速度决策时使用单一IMU角速度反馈系数；绝对值越大，角速度抑制越强。
+  dynamic_create_menu_txt(angle_loop_folder, "imu_suppress", &yaw_rate_feedback_sign, float_box);
 #endif
   dynamic_create_menu_txt(image_folder, "kwidth", &kwidth, float_box);
   dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);

@@ -78,6 +78,8 @@ static bluetooth_param_struct bluetooth_app_parameters[] =
     {"CORNER_YKP",     BLUETOOTH_PARAM_FLOAT, &speed_corner_yaw_rate_kp,         0.0f, 10.0f},
     {"ENTER_PX",       BLUETOOTH_PARAM_FLOAT, &SPEED_ENTER_LINE_PX,              0.0f, 94.0f},
     {"EXIT_PX",        BLUETOOTH_PARAM_FLOAT, &SPEED_EXIT_LINE_PX,               0.0f, 94.0f},
+    {"EXIT_GYRO",      BLUETOOTH_PARAM_FLOAT, &speed_exit_gyro_threshold,        0.0f, 360.0f},
+    {"EXIT_FRAMES",    BLUETOOTH_PARAM_INT,   &speed_straight_confirm_frames,    2.0f, 50.0f},
     {"ACCEL_STEP",     BLUETOOTH_PARAM_FLOAT, &speed_accel_step,                 0.0f, 100.0f},
     {"DECEL_STEP",     BLUETOOTH_PARAM_FLOAT, &speed_decel_step,                 0.0f, 100.0f},
 #endif
@@ -227,6 +229,15 @@ static bluetooth_param_struct *bluetooth_app_find_parameter(const char *name)
     return NULL;
 }
 
+static const char *bluetooth_app_road_state_name(void)
+{
+#if SPEED_DECISION_ENABLE
+    if (speed_state == SPEED_STATE_CORNER) return "CORNER";
+    if (speed_state == SPEED_STATE_OSCILLATION) return "OSCILLATION";
+#endif
+    return "STRAIGHT";
+}
+
 static void bluetooth_app_send_parameter(const bluetooth_param_struct *parameter)
 {
     char response[80];
@@ -250,7 +261,7 @@ static void bluetooth_app_send_status(void)
 {
     char response[BLUETOOTH_APP_TX_SIZE];
     snprintf(response, sizeof(response),
-             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,stream=%d,draw=%d,rate=%d,baud=%lu\n",
+             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,road=%s,stream=%d,draw=%d,rate=%d,baud=%lu\n",
              (base_speed > 0 || joystick_control_active), base_speed,
              (long)bluetooth_app_round_tenths(real_speedl),
              (long)bluetooth_app_round_tenths(real_speedr),
@@ -261,6 +272,7 @@ static void bluetooth_app_send_status(void)
 #else
              0,
 #endif
+             bluetooth_app_road_state_name(),
              bluetooth_app_stream_enabled, bluetooth_app_plot_enabled, bluetooth_app_telemetry_ms,
              (unsigned long)bluetooth_app_baud);
     bluetooth_app_send(response);
@@ -540,7 +552,7 @@ static void bluetooth_app_send_telemetry(void)
         return;
     }
     snprintf(telemetry, sizeof(telemetry),
-             "B,t=%lu,run=%d,b=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,g10=%ld,yr10=%ld,fps=%d,fms=%d,st=%d,cr=%u,zb=%d\n",
+             "B,t=%lu,run=%d,b=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,g10=%ld,yr10=%ld,fps=%d,fms=%d,st=%d,road=%s,cr=%u,zb=%d\n",
              (unsigned long)(g_sys_tick * SYS_TICK_MS), (base_speed > 0 || joystick_control_active), base_speed,
              (long)bluetooth_app_round_tenths(target_speedl),
              (long)bluetooth_app_round_tenths(target_speedr),
@@ -554,6 +566,7 @@ static void bluetooth_app_send_telemetry(void)
 #else
              0,
 #endif
+             bluetooth_app_road_state_name(),
              (unsigned int)cross_state, zebra_cross_count);
     bluetooth_app_send(telemetry);
 }

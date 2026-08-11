@@ -29,7 +29,7 @@ float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
-int run_base_speed = 280; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
+int run_base_speed = 232; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
 volatile uint8 joystick_control_active = 0;
 volatile int joystick_turn_percent = 0;
 volatile int joystick_forward_percent = 0;
@@ -37,17 +37,17 @@ static volatile float joystick_target_speedl = 0.0f;
 static volatile float joystick_target_speedr = 0.0f;
 static volatile uint32 joystick_last_packet_tick = 0;
 // 视觉外环P系数：每1像素横向偏差产生多少期望角速度，单位(deg/s)/pixel。
-float vision_yaw_kp = 4.0f;
+float vision_yaw_kp = 6.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.45f;
+float vision_yaw_kff = 0.48f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
 int yaw_rate_limit_dps = 180;
-// 当前道路状态实际使用的角速度反馈方向/比例，由速度状态机在直道与弯道值之间切换。
-float yaw_rate_feedback_sign = -1.01f;
+// IMU角速度反馈方向/比例；无速度决策时直接使用，有速度决策时由直弯状态切换。
+float yaw_rate_feedback_sign = -0.47f;
 // 视觉外环输出的期望角速度，主循环写入、10ms方向内环读取，单位deg/s。
 volatile float yaw_rate_ref_dps = 0.0f;
 // 角速度内环当前误差，供菜单观察，单位deg/s。
@@ -95,6 +95,8 @@ uint8 SPEED_EXIT_LINE_PX= (8);
 #define SPEED_OSCILLATION_MIN_HOLD_FRAMES (5)
 // 摆动状态中线偏差大且角速度同向持续该帧数，直接返回弯道状态。
 #define SPEED_OSCILLATION_CORNER_CONFIRM_FRAMES (3)
+// 即使菜单误设为0或1，出弯也至少需要连续两帧确认。
+#define SPEED_EXIT_CONFIRM_MIN_FRAMES (2)
 
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 290;
@@ -104,20 +106,22 @@ int speed_corner_speed = 230;
 float speed_straight_yaw_feedback_sign = -1.01f;  //-1.01
 // 弯道降低角速度反馈比例，避免影响弯道响应。
 float speed_corner_yaw_feedback_sign = -0.46f;//-0.40
-// 直道/出弯稳定阶段的角速度内环P系数。
+// 直道状态的角速度内环P系数。
 float speed_straight_yaw_rate_kp = 1.38f;
 // 弯道的角速度内环P系数。
 float speed_corner_yaw_rate_kp = 1.46f;
-// 直道/出弯稳定阶段直接使用的视觉外环P系数。
+// 直道状态直接使用的视觉外环P系数。
 float speed_straight_vision_kp = 4.0f;
 // 弯道直接使用的视觉外环P系数。
 float speed_corner_vision_kp = 8.93f;
 // 弯道视觉误差的保方向平方项系数：Kq * error * abs(error)。
-float speed_corner_vision_kq = 0.10f;
+float speed_corner_vision_kq = 0.24f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
 float speed_oscillation_gyro_threshold = 15.0f;
+// 出弯允许的最大角速度；车辆仍明显旋转时保持弯道方向参数。
+float speed_exit_gyro_threshold = 15.0f;
 // 在检测窗口内达到该换向次数后进入摆动抑制状态。
-int speed_oscillation_reversal_required = 3;
+int speed_oscillation_reversal_required = 6;
 // 当前速度状态；0是直道，1是弯道，复位时默认按直道处理。
 int speed_state = SPEED_STATE_STRAIGHT;
 // 最终提供给base_speed的整数速度指令，初始值为起步速度，单位：cm/s。
@@ -127,18 +131,14 @@ float speed_accel_step = 8.0f;
 // 每处理一个图像帧，速度最多降低多少，单位：cm/s/帧。
 float speed_decel_step = 13.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
-int speed_straight_confirm_frames = 2;
+int speed_straight_confirm_frames = 4;
 // 在直道状态下，连续满足多少帧入弯条件后才切换到弯道。
-int speed_corner_confirm_frames = 1;
+int speed_corner_confirm_frames = 2;
 
 // 弯道状态下已经连续满足出弯条件的帧数，仅在本文件内部使用。
 static int speed_straight_frame_count = 0;
 // 直道状态下已经连续满足入弯条件的帧数，仅在本文件内部使用。
 static int speed_corner_frame_count = 0;
-// 弯道中首次出现出弯条件后置true；此阶段速度不变，但提前使用直道方向参数。
-static bool speed_exit_stabilizing = false;
-// 出弯稳定阶段连续重新满足明显弯道条件的帧数，用于防止单帧摇摆撤销稳定阶段。
-static int speed_exit_cancel_frame_count = 0;
 // 最近一次超过检测阈值的角速度符号：1为正，-1为负，0为尚无有效样本。
 static int speed_oscillation_last_sign = 0;
 // 当前检测窗口内已经出现的有效角速度换向次数。
@@ -233,8 +233,6 @@ void speed_decision_reset(void)
   vision_yaw_kp = speed_straight_vision_kp; // 复位时同步使用直道视觉P系数。
   speed_straight_frame_count = 0;         // 清除之前累计的直道帧。
   speed_corner_frame_count = 0;           // 清除之前累计的弯道帧。
-  speed_exit_stabilizing = false;         // 清除出弯稳定阶段标志。
-  speed_exit_cancel_frame_count = 0;      // 清除撤销稳定阶段的确认帧数。
   speed_oscillation_last_sign = 0;        // 清除上一有效角速度符号。
   speed_oscillation_reversal_count = 0;   // 清除摆动换向次数。
   speed_oscillation_window_age = 0;       // 清除摆动检测窗口年龄。
@@ -278,8 +276,10 @@ void speed_decision_update(void)
   if (corner_speed > straight_speed) corner_speed = straight_speed;
   if (corner_speed < 0) corner_speed = 0;
 
-  // 普通直道或弯道中检测到快速多次换向，就进入独立的摆动抑制状态。
-  if (speed_state != SPEED_STATE_OSCILLATION && speed_oscillation_detect())
+  // Ω弯中仍有明显角速度时优先认为车辆正在连续转弯，不切入摆动抑制状态。
+  if (speed_state != SPEED_STATE_OSCILLATION && speed_oscillation_detect() &&
+      !(speed_state == SPEED_STATE_CORNER &&
+        speed_abs_float(imu_gyro_z_dps_filter) > speed_abs_float(speed_exit_gyro_threshold)))
   {
     speed_state = SPEED_STATE_OSCILLATION;
     speed_oscillation_hold_count = 0;
@@ -287,8 +287,6 @@ void speed_decision_update(void)
     speed_oscillation_corner_frame_count = 0;
     speed_straight_frame_count = 0;
     speed_corner_frame_count = 0;
-    speed_exit_stabilizing = false;
-    speed_exit_cancel_frame_count = 0;
   }
 
   if (speed_state == SPEED_STATE_OSCILLATION)
@@ -353,8 +351,6 @@ void speed_decision_update(void)
   }
   else if (speed_state == SPEED_STATE_STRAIGHT)
   {
-    speed_exit_stabilizing = false;
-    speed_exit_cancel_frame_count = 0;
     // 直道状态：偏差连续达到阈值才切换到弯道，过滤出弯后的单帧抖动。
     if (line_error >= SPEED_ENTER_LINE_PX)
     {
@@ -374,15 +370,20 @@ void speed_decision_update(void)
   }
   else
   {
-    // 弯道状态：图像中线偏差足够小，才累计直道确认帧。
+    float exit_gyro_limit = speed_abs_float(speed_exit_gyro_threshold);
+    float gyro_abs = speed_abs_float(imu_gyro_z_dps_filter);
+    int exit_confirm_frames = speed_straight_confirm_frames;
+
+    // 弯道状态：远近点差和角速度必须同时足够小，并连续满足若干帧才真正出弯。
+    // 确认完成前speed_state始终保持CORNER，继续使用弯道Kp和平方项。
     speed_corner_frame_count = 0;
-    if (line_error <= SPEED_EXIT_LINE_PX)
+    if (exit_confirm_frames < SPEED_EXIT_CONFIRM_MIN_FRAMES)
+      exit_confirm_frames = SPEED_EXIT_CONFIRM_MIN_FRAMES;
+
+    if (line_error <= SPEED_EXIT_LINE_PX && gyro_abs <= exit_gyro_limit)
     {
-      speed_exit_stabilizing = true;      // 首帧出弯迹象就提前切换直道视觉P系数并加强角速度反馈。
-      speed_exit_cancel_frame_count = 0;  // 当前满足出弯条件，不累计撤销帧数。
       speed_straight_frame_count++;
-      if (speed_straight_confirm_frames <= 0 ||
-          speed_straight_frame_count >= speed_straight_confirm_frames)
+      if (speed_straight_frame_count >= exit_confirm_frames)
       {
         speed_state = SPEED_STATE_STRAIGHT;
         speed_straight_frame_count = 0;
@@ -390,32 +391,14 @@ void speed_decision_update(void)
     }
     else
     {
+      // 任一条件不满足就重新累计；Ω弯持续旋转时会一直保持弯道状态。
       speed_straight_frame_count = 0;
-
-      if (speed_exit_stabilizing)
-      {
-        // 10~15像素属于滞回区，继续稳定；连续明显入弯才撤销出弯稳定阶段。
-        if (line_error >= SPEED_ENTER_LINE_PX)
-        {
-          speed_exit_cancel_frame_count++;
-          if (speed_corner_confirm_frames <= 0 ||
-              speed_exit_cancel_frame_count >= speed_corner_confirm_frames)
-          {
-            speed_exit_stabilizing = false;
-            speed_exit_cancel_frame_count = 0;
-          }
-        }
-        else
-        {
-          speed_exit_cancel_frame_count = 0;
-        }
-      }
     }
   }
 
-  // 正式直道或出弯稳定阶段都提前使用直道参数，但速度仍只由正式道路状态决定。
+  // 只有正式切回直道或进入摆动抑制状态后才使用直道方向参数。
   if (speed_state == SPEED_STATE_STRAIGHT ||
-      speed_state == SPEED_STATE_OSCILLATION || speed_exit_stabilizing)
+      speed_state == SPEED_STATE_OSCILLATION)
   {
     yaw_rate_feedback_sign = speed_straight_yaw_feedback_sign;
     yaw_rate_kp = speed_straight_yaw_rate_kp;
@@ -504,8 +487,8 @@ void steering_set_image_error(int16 error_weighted, int16 error_near,
             vision_yaw_kff * vision_preview_error_filter +
             vision_yaw_kd * vision_error_rate_filter;
 #if SPEED_DECISION_ENABLE
-  // 平方项保留error符号，避免左右弯都产生同一方向的转向量；出弯稳定阶段不启用。
-  if (speed_state == SPEED_STATE_CORNER && !speed_exit_stabilizing)
+  // 平方项保留error符号；只要仍是弯道状态就保持启用，直到出弯确认完成。
+  if (speed_state == SPEED_STATE_CORNER)
   {
     yaw_ref += speed_corner_vision_kq * image_error *
                ((image_error < 0.0f) ? -image_error : image_error);
