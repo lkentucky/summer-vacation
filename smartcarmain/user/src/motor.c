@@ -41,7 +41,7 @@ float vision_yaw_kp = 4.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.65f;
+float vision_yaw_kff = 0.45f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。

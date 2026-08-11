@@ -14,6 +14,43 @@ uint8 left_line[MT9V03X_H];  // 左边界数组
 uint8 right_line[MT9V03X_H];  // 右边界数组
 uint8 mid_line[MT9V03X_H];   // 中间线数组
 uint8 lost_counter;          // 丢线计数器
+#define CURVE_TRACK_WIDTH_FALLBACK 80
+#define CURVE_TRACK_WIDTH_MIN      12
+#define CURVE_TRACK_WIDTH_MAX      (MT9V03X_W - 6)
+#define CURVE_WIDTH_CHANGE_MIN_PX  6
+static uint8 curve_last_valid_width = CURVE_TRACK_WIDTH_FALLBACK;
+
+// 单边补线时，越靠前的预瞄区域越向弯道内侧多补一些，使车辆提前入弯。
+#define CURVE_PREVIEW_BIAS_START_ROW 70
+#define CURVE_PREVIEW_BIAS_FULL_ROW  35
+#define CURVE_PREVIEW_BIAS_MAX_PX    10
+float kwidth = 1.30f; // 赛道宽度缩放系数，1.0表示不缩放，>1.0表示放大，<1.0表示缩小
+
+static uint8 curve_preview_bias(uint16 row)
+{
+    if(row >= CURVE_PREVIEW_BIAS_START_ROW) return 0;
+    if(row <= CURVE_PREVIEW_BIAS_FULL_ROW) return CURVE_PREVIEW_BIAS_MAX_PX;
+
+    return (uint8)(((CURVE_PREVIEW_BIAS_START_ROW - row) * CURVE_PREVIEW_BIAS_MAX_PX) /
+                   (CURVE_PREVIEW_BIAS_START_ROW - CURVE_PREVIEW_BIAS_FULL_ROW));
+}
+
+// 从下往上搜线时，正常透视路宽应逐行平滑变化；突然收窄通常是假边界或错误跳变。
+static bool curve_width_is_continuous(uint8 width, uint8 expected_width)
+{
+    uint8 allowed_change = expected_width / 4;
+    uint8 width_delta;
+
+    if(allowed_change < CURVE_WIDTH_CHANGE_MIN_PX)
+        allowed_change = CURVE_WIDTH_CHANGE_MIN_PX;
+
+    if(width < CURVE_TRACK_WIDTH_MIN || width > CURVE_TRACK_WIDTH_MAX)
+        return false;
+
+    width_delta = width > expected_width ? width - expected_width : expected_width - width;
+    return width_delta <= allowed_change;
+}
+
 static uint8 ring_left_straight_offset_table[MT9V03X_H]; // 信左边界直行时，每行左线到中线的偏移
 static uint8 ring_left_enter_offset_table[MT9V03X_H];    // entry 入环线时，每行左线到中线的偏移
 static uint8 ring_offset_table_inited = 0;
@@ -180,12 +217,43 @@ void find_boundary(void)
 {
      uint8 left_point=base_point_left;    // 左边界从基点开始搜
      uint8 right_point=base_point_right;  // 右边界从基点开始搜
+     uint8 bottom_row = MT9V03X_H - 1;
+     bool bottom_left_valid = (left_point > 2 && left_point < MT9V03X_W - 3);
+     bool bottom_right_valid = (right_point > 2 && right_point < MT9V03X_W - 3);
+
+     // 先用底行基点初始化本帧的可信路宽；底行单边丢失时沿用上一可信宽度。
+     left_line[bottom_row] = left_point;
+     right_line[bottom_row] = right_point;
+     if (bottom_left_valid && bottom_right_valid && left_point < right_point)
+     {
+         uint8 bottom_width = right_point - left_point;
+         if (bottom_width >= CURVE_TRACK_WIDTH_MIN && bottom_width <= CURVE_TRACK_WIDTH_MAX)
+             curve_last_valid_width = bottom_width;
+         mid_line[bottom_row] = (uint8)(((uint16)left_point + right_point) / 2);
+     }
+     else if (bottom_left_valid)
+     {
+         mid_line[bottom_row] = uint8_limit((int16)left_point + curve_last_valid_width / 2,
+                                            0, MT9V03X_W - 1);
+     }
+     else if (bottom_right_valid)
+     {
+         mid_line[bottom_row] = uint8_limit((int16)right_point - curve_last_valid_width / 2,
+                                            0, MT9V03X_W - 1);
+     }
+     else
+     {
+         mid_line[bottom_row] = MT9V03X_W / 2;
+     }
+
      for(uint16 i=MT9V03X_H-2;i>search_end_line;i--)  // 从下往上搜
      {
         uint8 flag_leftpoint_left_search=0;  // 标记左边界点向右搜索范围的最右边还没找到左边界点(开始向左搜索)
         uint8 flag_leftpoint_mid_search=0;  // 标记左边界点向左搜索范围的最左边还没找到左边界点（开始由中间向左搜索）
         uint8 flag_rightpoint_right_search=0;  // 标记右边界点向左搜索范围的最左边还没找到右边界点(开始向右搜索)
         uint8 flag_rightpoint_mid_search=0;  // 标记右边界点向右搜索范围的最右边还没找到右边界点（开始由中间向右搜索）
+        bool left_found = false;             // 本行确实搜索到左边界跳变
+        bool right_found = false;            // 本行确实搜索到右边界跳变
         
          for(uint8 j=left_point;j<left_point+left_search_right_range;j++)  // 搜索左边界
          {
@@ -193,6 +261,7 @@ void find_boundary(void)
              if(twovalues_image[i][j]==0&&twovalues_image[i][j+1]==255&&twovalues_image[i][j+2]==255)  // 找到左边界点
              {
                  left_point=j;
+                 left_found=true;
                  break;
              }
              if(j+2==MT9V03X_W-1)  // 如果搜索到图像最右边还没找到左边界点，则将左边界点设置为图像最右边-2
@@ -213,6 +282,7 @@ void find_boundary(void)
                     if(twovalues_image[i][j]==255&&twovalues_image[i][j-1]==0&&twovalues_image[i][j-2]==0)  // 找到左边界点
                     {
                         left_point=j;
+                        left_found=true;
                         break;
                     }
                     
@@ -232,6 +302,7 @@ void find_boundary(void)
                     if(twovalues_image[i][j]==255&&twovalues_image[i][j-1]==0&&twovalues_image[i][j-2]==0)  // 找到左边界点
                     {
                         left_point=j;
+                        left_found=true;
                         break;
                     }
                     if(j==2)  // 如果搜索到图像最左边还没找到左边界点，则将左边界点设置为图像最左边+2
@@ -247,6 +318,7 @@ void find_boundary(void)
              if(twovalues_image[i][j]==0&&twovalues_image[i][j-1]==255&&twovalues_image[i][j-2]==255)  // 找到右边界点
              {
                  right_point=j;
+                 right_found=true;
                  break;
              }
              if(j==2)  // 如果搜索到图像最左边还没找到右边界点，则将右边界点设置为图像最左边+2
@@ -267,6 +339,7 @@ void find_boundary(void)
                     if(twovalues_image[i][j]==255&&twovalues_image[i][j+1]==0&&twovalues_image[i][j+2]==0)  // 找到右边界点
                     {
                         right_point=j;
+                        right_found=true;
                         break;
                     }
                    
@@ -286,6 +359,7 @@ void find_boundary(void)
                     if(twovalues_image[i][j]==255&&twovalues_image[i][j+1]==0&&twovalues_image[i][j+2]==0)  // 找到右边界点
                     {
                         right_point=j;
+                        right_found=true;
                         break;
                     }
                     if(j==MT9V03X_W-3)  // 如果搜索到图像最右边还没找到右边界点，则将右边界点设置为图像最右边-2
@@ -297,7 +371,39 @@ void find_boundary(void)
             }
         left_line[i]=uint8_limit(left_point, 0, MT9V03X_W-1);  // 将左边界点存入数组
         right_line[i]=uint8_limit(right_point, 0, MT9V03X_W-1);  // 将右边界点存入数组
-        mid_line[i]=uint8_limit((left_point+right_point)/2, 0, MT9V03X_W-1);  // 将中间点存入数组
+
+        // 参考Track_sweep.c：双边有效时更新可信路宽；弯道单边出画时，
+        // 从仍可见的边线向赛道内侧偏移半个可信路宽生成中线。
+        bool left_valid = left_found && (left_point > 2 && left_point < MT9V03X_W - 3);
+        bool right_valid = right_found && (right_point > 2 && right_point < MT9V03X_W - 3);
+        uint8 preview_bias = curve_preview_bias(i);
+
+        if (left_valid && right_valid && left_point < right_point)
+        {
+            uint8 width = right_point - left_point;
+            if (curve_width_is_continuous(width, curve_last_valid_width))
+                curve_last_valid_width = width;
+
+            // 两条边界都真实找到时始终取几何中点，禁止路宽判据把它改成单边补线。
+            mid_line[i] = (uint8)(((uint16)left_point + right_point) / 2);
+        }
+        else if (left_valid)
+        {
+            // 右边线丢失：远处在半路宽基础上继续向右补，提前建立右转路线。
+            mid_line[i] = uint8_limit((int16)left_point + kwidth * curve_last_valid_width / 2 + preview_bias,
+                                      0, MT9V03X_W - 1);
+        }
+        else if (right_valid)
+        {
+            // 左边线丢失：远处在半路宽基础上继续向左补，提前建立左转路线。
+            mid_line[i] = uint8_limit((int16)right_point - kwidth * curve_last_valid_width / 2 - preview_bias,
+                                      0, MT9V03X_W - 1);
+        }
+        else
+        {
+            // 双边都丢时不做单边猜测，后续十字状态机仍可根据真实丢线特征接管补线。
+            mid_line[i] = MT9V03X_W / 2;
+        }
     }
 }
 

@@ -360,15 +360,15 @@ static uint8 bluetooth_app_process_joystick(char *command)
     if (strncmp(command, "[JOYSTICK", 9) != 0) return 0;
 
     if (sscanf(command, "[JOYSTICK , %d , %d , %d , %d ] %n",
-               &turn, &forward, &unused_1, &unused_2, &consumed) != 4)
+               &unused_1, &forward, &turn, &unused_2, &consumed) != 4)
     {
-        bluetooth_app_send("ERR,joystick format [joystick,x,y,x,x]\n");
+        bluetooth_app_send("ERR,joystick format [joystick,unused,forward,turn,unused]\n");
         return 1;
     }
     end = bluetooth_app_skip_spaces(command + consumed);
     if (*end != '\0')
     {
-        bluetooth_app_send("ERR,joystick format [joystick,x,y,x,x]\n");
+        bluetooth_app_send("ERR,joystick format [joystick,unused,forward,turn,unused]\n");
         return 1;
     }
     if (turn < -100 || turn > 100 || forward < -100 || forward > 100 ||
@@ -476,7 +476,7 @@ static void bluetooth_app_process_command(char *command)
         }
     }
     else if (strcmp(command, "HELP") == 0)
-        bluetooth_app_send("CMD:PING STATUS GET [NAME] SET NAME VALUE START STOP STREAM ON|OFF DRAW [ON|OFF] RATE 100..2000 [joystick,x,y,x,x]\n");
+        bluetooth_app_send("CMD:PING STATUS GET [NAME] SET NAME VALUE START STOP STREAM ON|OFF DRAW [ON|OFF] RATE 100..2000 [joystick,u,f,t,u]\n");
     else
         bluetooth_app_send("ERR,unknown command; send HELP\n");
 }

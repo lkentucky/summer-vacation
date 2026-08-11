@@ -37,6 +37,7 @@ extern uint8 left_line[MT9V03X_H];              // 左边界数组
 extern uint8 right_line[MT9V03X_H];             // 右边界数组
 extern uint8 mid_line[MT9V03X_H];              // 中间线数组
 extern uint8 lost_counter;                      // 丢线计数器
+extern float kwidth;                            // 赛道宽度缩放系数
 void find_base_point(void);
 void set_image_twovalues(uint8 thr);
 uint8 otsu_threshold(uint8 image[][MT9V03X_W]);//大津法求阈值

@@ -88,6 +88,7 @@ void Init_menu(void) {
   dynamic_create_menu_txt(vision_loop_folder, "vision_kp", &vision_yaw_kp, float_box);
   dynamic_create_menu_txt(angle_loop_folder, "yaw_kp", &yaw_rate_kp, float_box);
 #endif
+  dynamic_create_menu_txt(image_folder, "kwidth", &kwidth, float_box);
   dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "frame_ms", &image_frame_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "proc_ms", &image_proc_ms, int32_box);
