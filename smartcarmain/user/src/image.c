@@ -24,7 +24,7 @@ static uint8 curve_last_valid_width = CURVE_TRACK_WIDTH_FALLBACK;
 #define CURVE_PREVIEW_BIAS_START_ROW 70
 #define CURVE_PREVIEW_BIAS_FULL_ROW  35
 #define CURVE_PREVIEW_BIAS_MAX_PX    10
-float kwidth = 1.30f; // 赛道宽度缩放系数，1.0表示不缩放，>1.0表示放大，<1.0表示缩小
+float kwidth = 1.18f; // 赛道宽度缩放系数，1.0表示不缩放，>1.0表示放大，<1.0表示缩小
 
 static uint8 curve_preview_bias(uint16 row)
 {
@@ -426,7 +426,7 @@ void draw_boundary(void)
 uint8 mid_weight_list[MT9V03X_H] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                     2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-                                    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                                    20,20,20,20,20,20,20,20,20,20, 
                                     12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
 
                                     20, 19, 18, 17, 16, 15, 14, 13, 12, 11,

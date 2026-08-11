@@ -99,7 +99,7 @@ uint8 SPEED_EXIT_LINE_PX= (8);
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 290;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
-int speed_corner_speed = 232;
+int speed_corner_speed = 230;
 // 直道使用原来的角速度反馈方向/比例。
 float speed_straight_yaw_feedback_sign = -1.01f;  //-1.01
 // 弯道降低角速度反馈比例，避免影响弯道响应。
@@ -111,7 +111,7 @@ float speed_corner_yaw_rate_kp = 1.46f;
 // 直道/出弯稳定阶段直接使用的视觉外环P系数。
 float speed_straight_vision_kp = 4.0f;
 // 弯道直接使用的视觉外环P系数。
-float speed_corner_vision_kp = 6.8f;
+float speed_corner_vision_kp = 8.93f;
 // 弯道视觉误差的保方向平方项系数：Kq * error * abs(error)。
 float speed_corner_vision_kq = 0.10f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
