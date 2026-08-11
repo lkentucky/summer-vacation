@@ -97,21 +97,25 @@ uint8 SPEED_EXIT_LINE_PX= (8);
 #define SPEED_OSCILLATION_CORNER_CONFIRM_FRAMES (3)
 // 即使菜单误设为0或1，出弯也至少需要连续两帧确认。
 #define SPEED_EXIT_CONFIRM_MIN_FRAMES (2)
+// 直弯状态切换时每个图像帧允许的最大参数变化，约两帧完成默认参数过渡。
+#define SPEED_VISION_KP_BLEND_STEP    (1.0f)
+#define SPEED_YAW_RATE_KP_BLEND_STEP  (0.08f)
+#define SPEED_YAW_FEEDBACK_BLEND_STEP (0.27f)
 
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 290;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
 int speed_corner_speed = 232;
-// 直道与弯道先共用实车验证通过的方向参数，使速度决策只改变目标速度。
-float speed_straight_yaw_feedback_sign = -0.47f;
+// 高速直道使用较强的IMU角速度抑制。
+float speed_straight_yaw_feedback_sign = -1.01f;
 // 弯道IMU角速度反馈方向/比例。
 float speed_corner_yaw_feedback_sign = -0.47f;
 // 直道状态的角速度内环P系数。
-float speed_straight_yaw_rate_kp = 1.53f;
+float speed_straight_yaw_rate_kp = 1.38f;
 // 弯道的角速度内环P系数。
 float speed_corner_yaw_rate_kp = 1.53f;
 // 直道状态直接使用的视觉外环P系数。
-float speed_straight_vision_kp = 6.0f;
+float speed_straight_vision_kp = 4.0f;
 // 弯道直接使用的视觉外环P系数。
 float speed_corner_vision_kp = 6.0f;
 // 当前实车参数是在关闭速度决策时验证的，当时平方项未参与；先置0保证弯道手感一致。
@@ -158,6 +162,14 @@ static float speed_command = 8.0f;
 static float speed_abs_float(float value)
 {
   return (value < 0.0f) ? -value : value;
+}
+
+static float speed_move_toward(float current, float target, float max_step)
+{
+  if (max_step < 0.0f) max_step = -max_step;
+  if (current < target - max_step) return current + max_step;
+  if (current > target + max_step) return current - max_step;
+  return target;
 }
 
 // 每个图像帧检查一次角速度符号；在限定窗口内多次正负换向时返回true。
@@ -396,19 +408,31 @@ void speed_decision_update(void)
     }
   }
 
-  // 只有正式切回直道或进入摆动抑制状态后才使用直道方向参数。
+  // 选择目标方向参数后逐帧靠近，避免状态切换时视觉和IMU反馈同时跳变。
   if (speed_state == SPEED_STATE_STRAIGHT ||
       speed_state == SPEED_STATE_OSCILLATION)
   {
-    yaw_rate_feedback_sign = speed_straight_yaw_feedback_sign;
-    yaw_rate_kp = speed_straight_yaw_rate_kp;
-    vision_yaw_kp = speed_straight_vision_kp;
+    yaw_rate_feedback_sign = speed_move_toward(yaw_rate_feedback_sign,
+                                                speed_straight_yaw_feedback_sign,
+                                                SPEED_YAW_FEEDBACK_BLEND_STEP);
+    yaw_rate_kp = speed_move_toward(yaw_rate_kp,
+                                    speed_straight_yaw_rate_kp,
+                                    SPEED_YAW_RATE_KP_BLEND_STEP);
+    vision_yaw_kp = speed_move_toward(vision_yaw_kp,
+                                      speed_straight_vision_kp,
+                                      SPEED_VISION_KP_BLEND_STEP);
   }
   else
   {
-    yaw_rate_feedback_sign = speed_corner_yaw_feedback_sign;
-    yaw_rate_kp = speed_corner_yaw_rate_kp;
-    vision_yaw_kp = speed_corner_vision_kp;
+    yaw_rate_feedback_sign = speed_move_toward(yaw_rate_feedback_sign,
+                                                speed_corner_yaw_feedback_sign,
+                                                SPEED_YAW_FEEDBACK_BLEND_STEP);
+    yaw_rate_kp = speed_move_toward(yaw_rate_kp,
+                                    speed_corner_yaw_rate_kp,
+                                    SPEED_YAW_RATE_KP_BLEND_STEP);
+    vision_yaw_kp = speed_move_toward(vision_yaw_kp,
+                                      speed_corner_vision_kp,
+                                      SPEED_VISION_KP_BLEND_STEP);
   }
 
   // 状态只选择两档目标速度，不再计算curve_score或做速度插值。
