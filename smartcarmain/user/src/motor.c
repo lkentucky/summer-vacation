@@ -85,9 +85,9 @@ static float motor_limit_float(float value, float min_value, float max_value)
 // 直道状态下，最大中线偏差达到该值就判定入弯，单位：像素。
 // 注意：从本版本起，入弯/出弯阈值衡量的是abs(远点偏差-近点偏差)，不再是横向位置偏差。
 // 因此小车平行于直道但没有位于正中心时，仍会保留直道参数。
-uint8 SPEED_ENTER_LINE_PX= (12);
+uint8 SPEED_ENTER_LINE_PX= (15);
 // 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
-uint8 SPEED_EXIT_LINE_PX= (10);
+uint8 SPEED_EXIT_LINE_PX= (12);
 // 角速度换向必须集中在该图像帧窗口内，才认为是快速左右摇摆。
 #define SPEED_OSCILLATION_WINDOW_FRAMES (10)
 // 摆动状态保持该帧数后进入直道，期间使用弯道安全速度和直道方向参数。
@@ -106,7 +106,7 @@ uint8 SPEED_EXIT_LINE_PX= (10);
 // 直道状态的目标速度，单位：cm/s。
 int speed_straight_speed = 290;
 // 弯道状态的目标速度，单位：cm/s；应设置为实车已验证的安全速度。
-int speed_corner_speed = 232;
+int speed_corner_speed = 240;
 // 高速直道使用较强的IMU角速度抑制。
 float speed_straight_yaw_feedback_sign = -1.01f;
 // 弯道IMU角速度反馈方向/比例。
@@ -118,13 +118,13 @@ float speed_corner_yaw_rate_kp = 1.53f;
 // 直道状态直接使用的视觉外环P系数。
 float speed_straight_vision_kp = 3.5f;
 // 弯道直接使用的视觉外环P系数。
-float speed_corner_vision_kp = 5.5f;
+float speed_corner_vision_kp = 6.0f;
 // 当前实车参数是在关闭速度决策时验证的，当时平方项未参与；先置0保证弯道手感一致。
 float speed_corner_vision_kq = 0.0f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
 float speed_oscillation_gyro_threshold = 15.0f;
 // 出弯允许的最大角速度；车辆仍明显旋转时保持弯道方向参数。
-float speed_exit_gyro_threshold = 15.0f;
+float speed_exit_gyro_threshold = 100.0f;
 // 在检测窗口内达到该换向次数后进入摆动抑制状态。
 int speed_oscillation_reversal_required = 6;
 // 当前速度状态；0是直道，1是弯道，复位时默认按直道处理。
