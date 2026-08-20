@@ -106,4 +106,5 @@ void steering_control_update(void);
 void motor_pid_speedcontrol(void);
 void motor_pid_reset(void);
 
-#endif  // __MOTOR_H_
+#endif  // __MOTOR_H__
+

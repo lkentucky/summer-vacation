@@ -129,6 +129,10 @@ static int16 get_mid_error_average(uint8 start_row, uint8 end_row)
   }
 
   for (uint8 i = start_row; i <= end_row; i++) {
+    bool left_valid = (left_line[i] > 2 && left_line[i] < MT9V03X_W - 3);
+    bool right_valid = (right_line[i] > 2 && right_line[i] < MT9V03X_W - 3);
+
+    if (!left_valid && !right_valid) continue;
     sum += mid_line[i];
     count++;
   }

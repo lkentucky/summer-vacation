@@ -18,13 +18,15 @@ uint8 lost_counter;          // 丢线计数器
 #define CURVE_TRACK_WIDTH_MIN      12
 #define CURVE_TRACK_WIDTH_MAX      (MT9V03X_W - 6)
 #define CURVE_WIDTH_CHANGE_MIN_PX  6
-static uint8 curve_last_valid_width = CURVE_TRACK_WIDTH_FALLBACK;
+static uint8 curve_track_width[MT9V03X_H];
+static bool curve_track_width_learned[MT9V03X_H];
+static bool curve_track_width_inited = false;
 
 // 单边补线时，越靠前的预瞄区域越向弯道内侧多补一些，使车辆提前入弯。
 #define CURVE_PREVIEW_BIAS_START_ROW 70
 #define CURVE_PREVIEW_BIAS_FULL_ROW  35
 #define CURVE_PREVIEW_BIAS_MAX_PX    10
-float kwidth = 1.18f; // 赛道宽度缩放系数，1.0表示不缩放，>1.0表示放大，<1.0表示缩小
+float kwidth = 1.28f; // 赛道宽度缩放系数，1.0表示不缩放，>1.0表示放大，<1.0表示缩小
 
 static uint8 curve_preview_bias(uint16 row)
 {
@@ -49,6 +51,35 @@ static bool curve_width_is_continuous(uint8 width, uint8 expected_width)
 
     width_delta = width > expected_width ? width - expected_width : expected_width - width;
     return width_delta <= allowed_change;
+}
+
+// 为每一行分别保存透视路宽；首个可信值直接建立基准，之后低通更新以抑制跳变。
+static void curve_track_width_init(void)
+{
+    if(curve_track_width_inited) return;
+
+    for(uint8 row = 0; row < MT9V03X_H; row++)
+    {
+        curve_track_width[row] = CURVE_TRACK_WIDTH_FALLBACK;
+        curve_track_width_learned[row] = false;
+    }
+    curve_track_width_inited = true;
+}
+
+static void curve_track_width_update(uint8 row, uint8 width)
+{
+    if(width < CURVE_TRACK_WIDTH_MIN || width > CURVE_TRACK_WIDTH_MAX) return;
+
+    if(!curve_track_width_learned[row])
+    {
+        curve_track_width[row] = width;
+        curve_track_width_learned[row] = true;
+    }
+    else if(curve_width_is_continuous(width, curve_track_width[row]))
+    {
+        curve_track_width[row] =
+            (uint8)(((uint16)curve_track_width[row] * 3 + width) / 4);
+    }
 }
 
 static uint8 ring_left_straight_offset_table[MT9V03X_H]; // 信左边界直行时，每行左线到中线的偏移
@@ -221,24 +252,25 @@ void find_boundary(void)
      bool bottom_left_valid = (left_point > 2 && left_point < MT9V03X_W - 3);
      bool bottom_right_valid = (right_point > 2 && right_point < MT9V03X_W - 3);
 
+     curve_track_width_init();
+
      // 先用底行基点初始化本帧的可信路宽；底行单边丢失时沿用上一可信宽度。
      left_line[bottom_row] = left_point;
      right_line[bottom_row] = right_point;
      if (bottom_left_valid && bottom_right_valid && left_point < right_point)
      {
          uint8 bottom_width = right_point - left_point;
-         if (bottom_width >= CURVE_TRACK_WIDTH_MIN && bottom_width <= CURVE_TRACK_WIDTH_MAX)
-             curve_last_valid_width = bottom_width;
+         curve_track_width_update(bottom_row, bottom_width);
          mid_line[bottom_row] = (uint8)(((uint16)left_point + right_point) / 2);
      }
      else if (bottom_left_valid)
      {
-         mid_line[bottom_row] = uint8_limit((int16)left_point + curve_last_valid_width / 2,
+         mid_line[bottom_row] = uint8_limit((int16)left_point + curve_track_width[bottom_row] / 2,
                                             0, MT9V03X_W - 1);
      }
      else if (bottom_right_valid)
      {
-         mid_line[bottom_row] = uint8_limit((int16)right_point - curve_last_valid_width / 2,
+         mid_line[bottom_row] = uint8_limit((int16)right_point - curve_track_width[bottom_row] / 2,
                                             0, MT9V03X_W - 1);
      }
      else
@@ -381,8 +413,7 @@ void find_boundary(void)
         if (left_valid && right_valid && left_point < right_point)
         {
             uint8 width = right_point - left_point;
-            if (curve_width_is_continuous(width, curve_last_valid_width))
-                curve_last_valid_width = width;
+            curve_track_width_update((uint8)i, width);
 
             // 两条边界都真实找到时始终取几何中点，禁止路宽判据把它改成单边补线。
             mid_line[i] = (uint8)(((uint16)left_point + right_point) / 2);
@@ -390,19 +421,19 @@ void find_boundary(void)
         else if (left_valid)
         {
             // 右边线丢失：远处在半路宽基础上继续向右补，提前建立右转路线。
-            mid_line[i] = uint8_limit((int16)left_point + kwidth * curve_last_valid_width / 2 + preview_bias,
+            mid_line[i] = uint8_limit((int16)left_point + kwidth * curve_track_width[i] / 2 + preview_bias,
                                       0, MT9V03X_W - 1);
         }
         else if (right_valid)
         {
             // 左边线丢失：远处在半路宽基础上继续向左补，提前建立左转路线。
-            mid_line[i] = uint8_limit((int16)right_point - kwidth * curve_last_valid_width / 2 - preview_bias,
+            mid_line[i] = uint8_limit((int16)right_point - kwidth * curve_track_width[i] / 2 - preview_bias,
                                       0, MT9V03X_W - 1);
         }
         else
         {
             // 双边都丢时不做单边猜测，后续十字状态机仍可根据真实丢线特征接管补线。
-            mid_line[i] = MT9V03X_W / 2;
+            mid_line[i] = mid_line[i + 1];
         }
     }
 }
@@ -452,9 +483,14 @@ uint8 mid_line_weighted_average(void)
 
     for (uint16 i = search_end_line; i < MT9V03X_H; i++)
     {
+        bool left_valid = (left_line[i] > 2 && left_line[i] < MT9V03X_W - 3);
+        bool right_valid = (right_line[i] > 2 && right_line[i] < MT9V03X_W - 3);
+
+        if(!left_valid && !right_valid) continue;
         sum += mid_line[i] * mid_weight_list[i];
         weight_sum += mid_weight_list[i];
     }
+    if(weight_sum == 0) return mid_line_last;
     mid_line_thistime = (uint8)(sum / weight_sum);
     mid_line_final = (uint8)(mid_line_last * 0.2f + mid_line_thistime * 0.8f);
     mid_line_last = mid_line_thistime;

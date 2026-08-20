@@ -4,8 +4,9 @@
 
 #define D 6.5   //轮子直径
 #define PPR 1024 //编码器每转脉冲数
-#define STEER_MAX_RATIO       (0.85f)   // 当前基础速度允许的最大左右轮差速比例，单位：无量纲。
-#define STEER_MAX_STEP        (15.0f)   // 每10ms转向环更新允许的最大差速变化，单位cm/s。
+#define STEER_MAX_RATIO       (1.20f)   // 急弯允许内轮轻微反转，提高最大横摆能力。
+#define STEER_ATTACK_STEP     (60.0f)   // 每2ms转向加深时允许的最大差速变化，单位cm/s。
+#define STEER_RELEASE_STEP    (20.0f)   // 每2ms回正或换向时允许的最大差速变化，单位cm/s。
 #define VISION_D_FILTER_HZ      (6.0f)   // 视觉误差微分低通截止频率，单位Hz。
 #define VISION_DEFAULT_DT_S     (0.020f) // 首帧或异常帧间隔时使用的默认周期，单位s。
 #define VISION_MIN_DT_S         (0.005f) // 接受的最小图像周期，防止微分被异常小dt放大。
@@ -41,7 +42,7 @@ float vision_yaw_kp = 6.0f;
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
 float vision_yaw_kd = 0.03f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.37f;
+float vision_yaw_kff = 0.30f;
 // 当前道路状态实际使用的角速度内环P系数，由速度状态机自动切换。
 float yaw_rate_kp = 1.53f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
@@ -61,7 +62,7 @@ static float vision_error_rate_filter = 0.0f;      // 低通后的视觉误差�
 static float vision_preview_error_filter = 0.0f;   // 低通后的“远点-加权偏差”预瞄增量，单位pixel。
 static bool vision_last_error_valid = false;       // false表示尚无上一帧，首帧不计算微分。
 static volatile uint32 vision_last_image_tick = 0; // 最近一次视觉外环更新时刻，单位2ms系统tick。
-static float steer_last_output = 0.0f;             // 上一次左右轮差速指令，用于限制每10ms变化量。
+static float steer_last_output = 0.0f;             // 上一次左右轮差速指令，用于限制每2ms变化量。
 
 static float motor_limit_float(float value, float min_value, float max_value)
 {
@@ -86,7 +87,7 @@ static float motor_limit_float(float value, float min_value, float max_value)
 // 因此小车平行于直道但没有位于正中心时，仍会保留直道参数。
 uint8 SPEED_ENTER_LINE_PX= (12);
 // 弯道状态下，最大中线偏差必须低于该值才可能判定出弯，单位：像素。
-uint8 SPEED_EXIT_LINE_PX= (8);
+uint8 SPEED_EXIT_LINE_PX= (10);
 // 角速度换向必须集中在该图像帧窗口内，才认为是快速左右摇摆。
 #define SPEED_OSCILLATION_WINDOW_FRAMES (10)
 // 摆动状态保持该帧数后进入直道，期间使用弯道安全速度和直道方向参数。
@@ -115,9 +116,9 @@ float speed_straight_yaw_rate_kp = 1.38f;
 // 弯道的角速度内环P系数。
 float speed_corner_yaw_rate_kp = 1.53f;
 // 直道状态直接使用的视觉外环P系数。
-float speed_straight_vision_kp = 4.0f;
+float speed_straight_vision_kp = 3.5f;
 // 弯道直接使用的视觉外环P系数。
-float speed_corner_vision_kp = 6.0f;
+float speed_corner_vision_kp = 5.5f;
 // 当前实车参数是在关闭速度决策时验证的，当时平方项未参与；先置0保证弯道手感一致。
 float speed_corner_vision_kq = 0.0f;
 // 只有角速度绝对值达到该值时，其正负变化才计入摆动检测，避免零点噪声误触发。
@@ -131,7 +132,7 @@ int speed_state = SPEED_STATE_STRAIGHT;
 // 最终提供给base_speed的整数速度指令，初始值为起步速度，单位：cm/s。
 int speed_decision_speed = 8;
 // 每处理一个图像帧，速度最多增加多少，单位：cm/s/帧。
-float speed_accel_step = 8.0f;
+float speed_accel_step = 10.0f;
 // 每处理一个图像帧，速度最多降低多少，单位：cm/s/帧。
 float speed_decel_step = 13.0f;
 // 在弯道状态下，连续满足多少帧出弯条件后才切换到直道。
@@ -575,7 +576,7 @@ void motor_joystick_set(int turn_percent, int forward_percent)
   joystick_last_packet_tick = g_sys_tick;
   joystick_control_active = 1;
 }
-// 由TIM6每10ms分频调用：角速度P内环跟踪视觉外环给出的期望角速度。
+// 由TIM6每2ms调用：角速度P内环跟踪视觉外环给出的期望角速度。
 // 本函数不处理图像、不读取IMU硬件，只使用主循环已经更新的期望值和陀螺仪滤波值。
 void steering_control_update(void)
 {
@@ -600,6 +601,8 @@ void steering_control_update(void)
     float yaw_rate_measured;          // 修正安装方向后的实际角速度，单位deg/s。
     float steering;                   // 角速度P环输出的左右轮速度差修正，单位cm/s。
     float max_steering;               // 当前基础速度允许的最大差速修正，单位cm/s。
+    float steering_step;              // 本次根据转向加深或释放选择的变化上限。
+    bool same_direction;              // 目标差速与当前差速方向是否一致。
     uint32 image_age_ms;              // 距离最近一次视觉更新的时间，单位ms。
 
     image_age_ms = (g_sys_tick - vision_last_image_tick) * SYS_TICK_MS;
@@ -616,9 +619,14 @@ void steering_control_update(void)
 
     max_steering = (float)base_speed * STEER_MAX_RATIO;
     steering = motor_limit_float(steering, -max_steering, max_steering);
+    same_direction = (steering == 0.0f || steer_last_output == 0.0f ||
+                      steering * steer_last_output > 0.0f);
+    steering_step = (same_direction &&
+                     float_abs(steering) > float_abs(steer_last_output)) ?
+                    STEER_ATTACK_STEP : STEER_RELEASE_STEP;
     steering = motor_limit_float(steering,
-                                 steer_last_output - STEER_MAX_STEP,
-                                 steer_last_output + STEER_MAX_STEP);
+                                 steer_last_output - steering_step,
+                                 steer_last_output + steering_step);
 
     steer_last_output = steering;
 
