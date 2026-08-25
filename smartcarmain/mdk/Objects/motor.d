@@ -97,3 +97,4 @@
 .\objects\motor.o: ..\user\inc\calculation.h
 .\objects\motor.o: ..\user\inc\IMU.h
 .\objects\motor.o: ..\user\inc\isr.h
+.\objects\motor.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h

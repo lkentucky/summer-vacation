@@ -6,12 +6,12 @@
 /*
  * 简化后的十字状态：
  * idle         ：普通巡线，等待十字入口。
- * detecting    ：入口已经锁存，固定端点补线7帧。
+ * detecting    ：入口已经锁存，固定端点补线至少0.3秒。
  */
 enum
 {
     cross_state_idle = 0,       // 0：普通巡线
-    cross_state_detecting       // 1：固定补线10帧
+    cross_state_detecting       // 1：固定补线至少0.3秒
 };
 
 extern uint8 cross_state;       // 当前状态，可在图像菜单cross参数中观察

@@ -51,13 +51,17 @@
 #define IMAGE_PERIOD_MS_MIN       SYS_TICK_MS
 #define IMAGE_PERIOD_MS_MAX       50
 #define IMAGE_DISPLAY_SKIP_FRAMES  5
+#define IMAGE_MENU_ERR_VALUE_X     150       // image菜单中line_err数值的横坐标
+#define IMAGE_MENU_ERR_VALUE_Y     (5 * 16)  // line_err是image菜单第6项
+#define IMAGE_MENU_HEAD_VALUE_X    150       // image菜单中head_err数值的横坐标
+#define IMAGE_MENU_HEAD_VALUE_Y    (6 * 16)  // head_err是image菜单第7项
 #define IMAGE_MENU_CROSS_VALUE_X   150       // 图像菜单中cross数值的横坐标
-#define IMAGE_MENU_CROSS_VALUE_Y   (5 * 16)  // cross是图像菜单第6项，对应第5行
+#define IMAGE_MENU_CROSS_VALUE_Y   (7 * 16)  // cross是image菜单第8项
 #define IMAGE_MENU_ZEBRA_VALUE_X   150       // 图像菜单中斑马线数据的横坐标
-#define IMAGE_MENU_ZEBRA_COUNT_Y   (6 * 16)  // zebra_n是图像菜单第7项，对应第6行
-#define IMAGE_MENU_ZEBRA_JUMP_Y    (7 * 16)  // zebra_jump是图像菜单第8项，对应第7行
-#define IMAGE_MENU_ZEBRA_ROWS_Y    (8 * 16)  // zebra_rows是图像菜单第9项，对应第8行
-#define IMAGE_MENU_ZEBRA_STATE_Y   (9 * 16)  // zebra_state是图像菜单第10项，对应第9行
+#define IMAGE_MENU_ZEBRA_COUNT_Y   (8 * 16)  // zebra_n是image菜单第9项
+#define IMAGE_MENU_ZEBRA_JUMP_Y    (9 * 16)  // zebra_wbb是image菜单第10项
+#define IMAGE_MENU_ZEBRA_ROWS_Y   (10 * 16)  // zebra_rows是image菜单第11项
+#define IMAGE_MENU_ZEBRA_STATE_Y  (11 * 16)  // zebra_state是image菜单第12项
 #define ZEBRA_CHECK_ROWS              3       // 参考库：检查图像底部119、118、117三行
 #define ZEBRA_GUARD_OFFSET           30       // 参考库：距底30行处须同时存在左右边界
 #define ZEBRA_PATTERN_REQUIRED        4       // 参考库：任一检测行至少出现4次“白黑黑”
@@ -399,15 +403,6 @@ int main(void) {
       Show_menu(); // 每100ms刷新一次累计计数和换算速度，避免只在按键时看到旧值。
     }
 
-    if (base_speed > 0) {
-#if SPEED_DECISION_ENABLE
-      // 启用后使用速度决策输出；总开关为0时仍保持原来的固定巡线速度。
-      base_speed = speed_decision_speed;
-#else
-      base_speed = run_base_speed;  // 运行中允许通过菜单实时调整巡线速度
-#endif
-    }
-
     if (base_speed > 0 && last_base_speed <= 0) {
       track_start_grace_count = TRACK_START_GRACE_FRAMES;
       track_lost_frame_count = 0;
@@ -518,15 +513,17 @@ int main(void) {
     case STEP_STEER:
       // 主反馈是多行中线加权偏差；远点偏差用于生成低通后的预瞄前馈。
       // 加权偏差不等于单独近点，控制器内使用“远点-加权偏差”而非几何远近点斜率。
-      // 道路状态另用“远点-近点”判断；整条中线横向偏移不会再误判为弯道。
-      // 因此车身平行于直道时，即使小车不在赛道正中心，仍使用直道参数。
+      // 只保留一套方向参数：加权中线负责主反馈，远点负责预瞄。
       steering_set_image_error((int16)mid_line_weighted_average() - STEER_CENTER_COL,
                                get_mid_error_average(STEER_NEAR_ROW_START, STEER_NEAR_ROW_END),
                                get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END),
                                (float)image_frame_ms * 0.001f);
-#if SPEED_DECISION_ENABLE
-      speed_decision_update();  // 每个新图像帧更新一次直道/弯道状态和目标速度
-#endif
+      if (menu_is_image_page()) {
+        ips200_show_int(IMAGE_MENU_ERR_VALUE_X, IMAGE_MENU_ERR_VALUE_Y,
+                        steering_get_image_error(), 4);
+        ips200_show_float(IMAGE_MENU_HEAD_VALUE_X, IMAGE_MENU_HEAD_VALUE_Y,
+                          steering_heading_error_deg_display, 3, 1);
+      }
       image_proc_ms = (int)image_ticks_to_ms(g_sys_tick - image_process_start_tick);
       if (menu_is_image_page()) {
         if (++image_display_skip >= IMAGE_DISPLAY_SKIP_FRAMES) {
@@ -554,8 +551,8 @@ int main(void) {
       ips200_show_string(108, 272, "fps " );
       ips200_show_int(142, 272, image_proc_ms, 2);
       ips200_show_string(160, 272, "ms");
-      ips200_show_string(0, 288, "TURN ERR ");
-      ips200_show_int(72, 288, steering_get_heading_error(), 3);
+      ips200_show_string(0, 288, "YAW REF ");
+      ips200_show_int(64, 288, (int)yaw_rate_ref_dps, 4);
       step = STEP_IDLE;
       break;
     }

@@ -63,26 +63,14 @@ static bluetooth_param_struct bluetooth_app_parameters[] =
     {"SPEED_KD",       BLUETOOTH_PARAM_FLOAT, &Kd,                               0.0f, 20.0f},
     {"RUN_SPEED",      BLUETOOTH_PARAM_INT,   &run_base_speed,                   0.0f, 600.0f},
     {"VISION_KP",      BLUETOOTH_PARAM_FLOAT, &vision_yaw_kp,                    0.0f, 20.0f},
+    {"VISION_KQ",      BLUETOOTH_PARAM_FLOAT, &vision_yaw_kq,                    0.0f, 1.0f},
+    {"VISION_KP_MAX",  BLUETOOTH_PARAM_FLOAT, &vision_yaw_kp_max,                0.0f, 30.0f},
+    {"ERR_DEADBAND",   BLUETOOTH_PARAM_FLOAT, &vision_error_deadband,             0.0f, 20.0f},
     {"VISION_KD",      BLUETOOTH_PARAM_FLOAT, &vision_yaw_kd,                    0.0f, 2.0f},
     {"VISION_FF",      BLUETOOTH_PARAM_FLOAT, &vision_yaw_kff,                 -10.0f, 10.0f},
     {"YAW_KP",         BLUETOOTH_PARAM_FLOAT, &yaw_rate_kp,                      0.0f, 10.0f},
     {"YAW_SIGN",       BLUETOOTH_PARAM_FLOAT, &yaw_rate_feedback_sign,          -2.0f, 2.0f},
     {"YAW_MAX",        BLUETOOTH_PARAM_INT,   &yaw_rate_limit_dps,               0.0f, 720.0f},
-#if SPEED_DECISION_ENABLE
-    {"STRAIGHT_SPEED", BLUETOOTH_PARAM_INT,   &speed_straight_speed,             0.0f, 600.0f},
-    {"CORNER_SPEED",   BLUETOOTH_PARAM_INT,   &speed_corner_speed,               0.0f, 600.0f},
-    {"STRAIGHT_VKP",   BLUETOOTH_PARAM_FLOAT, &speed_straight_vision_kp,         0.0f, 20.0f},
-    {"CORNER_VKP",     BLUETOOTH_PARAM_FLOAT, &speed_corner_vision_kp,           0.0f, 20.0f},
-    {"CORNER_VKQ",     BLUETOOTH_PARAM_FLOAT, &speed_corner_vision_kq,           0.0f, 2.0f},
-    {"STRAIGHT_YKP",   BLUETOOTH_PARAM_FLOAT, &speed_straight_yaw_rate_kp,       0.0f, 10.0f},
-    {"CORNER_YKP",     BLUETOOTH_PARAM_FLOAT, &speed_corner_yaw_rate_kp,         0.0f, 10.0f},
-    {"ENTER_PX",       BLUETOOTH_PARAM_FLOAT, &SPEED_ENTER_LINE_PX,              0.0f, 94.0f},
-    {"EXIT_PX",        BLUETOOTH_PARAM_FLOAT, &SPEED_EXIT_LINE_PX,               0.0f, 94.0f},
-    {"EXIT_GYRO",      BLUETOOTH_PARAM_FLOAT, &speed_exit_gyro_threshold,        0.0f, 360.0f},
-    {"EXIT_FRAMES",    BLUETOOTH_PARAM_INT,   &speed_straight_confirm_frames,    2.0f, 50.0f},
-    {"ACCEL_STEP",     BLUETOOTH_PARAM_FLOAT, &speed_accel_step,                 0.0f, 100.0f},
-    {"DECEL_STEP",     BLUETOOTH_PARAM_FLOAT, &speed_decel_step,                 0.0f, 100.0f},
-#endif
 };
 
 static uint16 bluetooth_app_rx_next(uint16 index)
@@ -231,11 +219,7 @@ static bluetooth_param_struct *bluetooth_app_find_parameter(const char *name)
 
 static const char *bluetooth_app_road_state_name(void)
 {
-#if SPEED_DECISION_ENABLE
-    if (speed_state == SPEED_STATE_CORNER) return "CORNER";
-    if (speed_state == SPEED_STATE_OSCILLATION) return "OSCILLATION";
-#endif
-    return "STRAIGHT";
+    return "FIXED";
 }
 
 static void bluetooth_app_send_parameter(const bluetooth_param_struct *parameter)
@@ -261,17 +245,13 @@ static void bluetooth_app_send_status(void)
 {
     char response[BLUETOOTH_APP_TX_SIZE];
     snprintf(response, sizeof(response),
-             "S,run=%d,base=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,road=%s,stream=%d,draw=%d,rate=%d,baud=%lu\n",
-             (base_speed > 0 || joystick_control_active), base_speed,
+             "S,run=%d,base=%d,tier=%d,vl10=%ld,vr10=%ld,err=%d,gyro10=%ld,fps=%d,state=%d,road=%s,stream=%d,draw=%d,rate=%d,baud=%lu\n",
+             (motor_auto_is_running() || joystick_control_active), base_speed, speed_tier_current,
              (long)bluetooth_app_round_tenths(real_speedl),
              (long)bluetooth_app_round_tenths(real_speedr),
              (int)steering_get_image_error(),
              (long)bluetooth_app_round_tenths(imu_gyro_z_dps_filter), image_fps,
-#if SPEED_DECISION_ENABLE
-             speed_state,
-#else
              0,
-#endif
              bluetooth_app_road_state_name(),
              bluetooth_app_stream_enabled, bluetooth_app_plot_enabled, bluetooth_app_telemetry_ms,
              (unsigned long)bluetooth_app_baud);
@@ -287,11 +267,7 @@ static void bluetooth_app_stop_car(void)
 static void bluetooth_app_start_car(void)
 {
     bluetooth_app_stop_car();
-#if SPEED_DECISION_ENABLE
-    base_speed = speed_decision_speed;
-#else
-    base_speed = run_base_speed;
-#endif
+    motor_auto_start();
 }
 
 static void bluetooth_app_set_parameter(char *arguments)
@@ -541,32 +517,23 @@ static void bluetooth_app_send_telemetry(void)
 
     if (bluetooth_app_plot_enabled)
     {
-#if SPEED_DECISION_ENABLE
-        snprintf(telemetry, sizeof(telemetry), "[plot,%d,%u]", speed_state,
-                 (unsigned int)cross_state);
-#else
-        snprintf(telemetry, sizeof(telemetry), "[plot,0,%u]",
-                 (unsigned int)cross_state);
-#endif
+        snprintf(telemetry, sizeof(telemetry), "[plot,%d,%u]",
+                 speed_tier_current, (unsigned int)cross_state);
         bluetooth_app_send(telemetry);
         return;
     }
     snprintf(telemetry, sizeof(telemetry),
-             "B,t=%lu,run=%d,b=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,g10=%ld,yr10=%ld,fps=%d,fms=%d,st=%d,road=%s,cr=%u,zb=%d\n",
-             (unsigned long)(g_sys_tick * SYS_TICK_MS), (base_speed > 0 || joystick_control_active), base_speed,
+             "B,t=%lu,run=%d,b=%d,tier=%d,tl10=%ld,tr10=%ld,vl10=%ld,vr10=%ld,e=%d,g10=%ld,yr10=%ld,fps=%d,fms=%d,st=%d,road=%s,cr=%u,zb=%d\n",
+             (unsigned long)(g_sys_tick * SYS_TICK_MS), (motor_auto_is_running() || joystick_control_active), base_speed, speed_tier_current,
              (long)bluetooth_app_round_tenths(target_speedl),
              (long)bluetooth_app_round_tenths(target_speedr),
              (long)bluetooth_app_round_tenths(real_speedl),
              (long)bluetooth_app_round_tenths(real_speedr),
-             (int)steering_get_image_error(),
-             (long)bluetooth_app_round_tenths(imu_gyro_z_dps_filter),
-             (long)bluetooth_app_round_tenths(yaw_rate_ref_dps), image_fps, image_frame_ms,
-#if SPEED_DECISION_ENABLE
-             speed_state,
-#else
-             0,
-#endif
-             bluetooth_app_road_state_name(),
+              (int)steering_get_image_error(),
+              (long)bluetooth_app_round_tenths(imu_gyro_z_dps_filter),
+              (long)bluetooth_app_round_tenths(yaw_rate_ref_dps), image_fps, image_frame_ms,
+              0,
+              bluetooth_app_road_state_name(),
              (unsigned int)cross_state, zebra_cross_count);
     bluetooth_app_send(telemetry);
 }

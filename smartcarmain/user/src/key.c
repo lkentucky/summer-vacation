@@ -5,7 +5,8 @@
 #include "zf_driver_gpio.h"
 
 
-#define DOUBLE_CLICK_TICKS 30
+#define K3_DOUBLE_CLICK_TICKS 30   // K3沿用约120ms的菜单快捷双击窗口。
+#define K4_DOUBLE_CLICK_TICKS 100  // K4约400ms，保证正常手速也能可靠启停车辆。
 #define INITIAL_DELAY 50
 #define REPEAT_DELAY 10
 
@@ -37,12 +38,13 @@ bool key_handle(void) {
   key_scanner();
   tick++;
 
-  if (key3_pending && (tick - key3_press_tick > DOUBLE_CLICK_TICKS)) {
+  if (key3_pending && (tick - key3_press_tick > K3_DOUBLE_CLICK_TICKS)) {
     key_3();
     key3_pending = false;
     action = true;
   }
-  if (key4_pending && (tick - key4_press_tick > DOUBLE_CLICK_TICKS)) {
+  // 窗口到期前不返回菜单、不清屏，给第二次K4留出完整识别时间。
+  if (key4_pending && (tick - key4_press_tick > K4_DOUBLE_CLICK_TICKS)) {
     back_folder();
     key4_pending = false;
     action = true;

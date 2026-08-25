@@ -62,46 +62,32 @@ void Init_menu(void) {
   dynamic_create_menu_txt(vision_loop_folder, "vision_ff", &vision_yaw_kff, float_box);
   dynamic_create_menu_txt(angle_loop_folder, "yaw_max", &yaw_rate_limit_dps, int32_box);
   dynamic_create_menu_txt(angle_loop_folder, "gyro_z", &imu_gyro_z_dps_filter, float_box);
-#if SPEED_DECISION_ENABLE
-  // 三状态速度决策菜单：spd_state中0=直道，1=弯道，2=摆动抑制。
-  dynamic_create_menu_txt(vision_loop_folder, "spd_straight", &speed_straight_speed, int32_box);
-  dynamic_create_menu_txt(vision_loop_folder, "spd_corner", &speed_corner_speed, int32_box);
-  dynamic_create_menu_txt(angle_loop_folder, "yaw_str", &speed_straight_yaw_feedback_sign, float_box);
-  dynamic_create_menu_txt(angle_loop_folder, "yaw_cur", &speed_corner_yaw_feedback_sign, float_box);
-  dynamic_create_menu_txt(angle_loop_folder, "ykp_str", &speed_straight_yaw_rate_kp, float_box);
-  dynamic_create_menu_txt(angle_loop_folder, "ykp_cur", &speed_corner_yaw_rate_kp, float_box);
-  dynamic_create_menu_txt(angle_loop_folder, "gyro_th", &speed_oscillation_gyro_threshold, float_box);
-  dynamic_create_menu_txt(angle_loop_folder, "exit_gyro", &speed_exit_gyro_threshold, float_box);
-  dynamic_create_menu_txt(vision_loop_folder, "kp_str", &speed_straight_vision_kp, float_box);
-  dynamic_create_menu_txt(vision_loop_folder, "kp_cur", &speed_corner_vision_kp, float_box);
-  dynamic_create_menu_txt(vision_loop_folder, "kq_cur", &speed_corner_vision_kq, float_box);
-  dynamic_create_menu_txt(vision_loop_folder, "spd_state", &speed_state, int32_box);
-  dynamic_create_menu_txt(vision_loop_folder, "spd_cmd", &speed_decision_speed, int32_box);
-  dynamic_create_menu_txt(vision_loop_folder, "spd_up", &speed_accel_step, float_box);
-  dynamic_create_menu_txt(vision_loop_folder, "spd_down", &speed_decel_step, float_box);
-  dynamic_create_menu_txt(vision_loop_folder, "straight_n", &speed_straight_confirm_frames, int32_box);
-  dynamic_create_menu_txt(vision_loop_folder, "corner_n", &speed_corner_confirm_frames, int32_box);
-  dynamic_create_menu_txt(vision_loop_folder, "osc_n", &speed_oscillation_reversal_required, int32_box);
-  dynamic_create_menu_txt(vision_loop_folder, "enter_px", &SPEED_ENTER_LINE_PX, uint8_box);
-  dynamic_create_menu_txt(vision_loop_folder, "exit_px", &SPEED_EXIT_LINE_PX, uint8_box);
-#else
   dynamic_create_menu_txt(vision_loop_folder, "run_speed", &run_base_speed, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_p1", &speed_tier_ratio_1, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_p2", &speed_tier_ratio_2, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_p3", &speed_tier_ratio_3, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_p4", &speed_tier_ratio_4, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_up", &speed_tier_accel_step, int32_box);
+  dynamic_create_menu_txt(vision_loop_folder, "spd_down", &speed_tier_decel_step, int32_box);
   dynamic_create_menu_txt(vision_loop_folder, "vision_kp", &vision_yaw_kp, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "vision_kq", &vision_yaw_kq, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "vision_kp_max", &vision_yaw_kp_max, float_box);
+  dynamic_create_menu_txt(vision_loop_folder, "err_dead", &vision_error_deadband, float_box);
   dynamic_create_menu_txt(angle_loop_folder, "yaw_kp", &yaw_rate_kp, float_box);
-  // 无速度决策时使用单一IMU角速度反馈系数；绝对值越大，角速度抑制越强。
   dynamic_create_menu_txt(angle_loop_folder, "imu_suppress", &yaw_rate_feedback_sign, float_box);
-#endif
   dynamic_create_menu_txt(image_folder, "kwidth", &kwidth, float_box);
   dynamic_create_menu_txt(image_folder, "period_ms", &image_period_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "frame_ms", &image_frame_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "proc_ms", &image_proc_ms, int32_box);
   dynamic_create_menu_txt(image_folder, "fps", &image_fps, int32_box);
-  dynamic_create_menu_txt(image_folder, "wait", &image_wait_count, int32_box);
+  dynamic_create_menu_txt(image_folder, "line_err", (void *)&steering_image_error_display, int32_box);
+  dynamic_create_menu_txt(image_folder, "head_err", (void *)&steering_heading_error_deg_display, float_box);
   dynamic_create_menu_txt(image_folder, "cross", &cross_state, uint8_box);
   dynamic_create_menu_txt(image_folder, "zebra_n", &zebra_cross_count, int32_box);
   dynamic_create_menu_txt(image_folder, "zebra_wbb", &zebra_transition_count, int32_box);
   dynamic_create_menu_txt(image_folder, "zebra_rows", &zebra_match_row_count, int32_box);
   dynamic_create_menu_txt(image_folder, "zebra_state", &zebra_state, int32_box);
+  dynamic_create_menu_txt(image_folder, "wait", &image_wait_count, int32_box);
   dynamic_create_menu_txt(&head, "threshold", &threshold, uint8_box);
 
   current_index = head.first_son;
@@ -272,16 +258,10 @@ void key_3_double(void) {
 }
 
 void key_4_double(void) {
-  uint8 was_running = (joystick_control_active || base_speed != 0);
-
-  motor_joystick_stop();
-  if (!was_running) {
-#if SPEED_DECISION_ENABLE
-    // motor_joystick_stop已复位速度决策，避免启动瞬间出现速度尖峰。
-    base_speed = speed_decision_speed;
-#else
-    base_speed = run_base_speed;
-#endif
+  if (joystick_control_active || motor_auto_is_running()) {
+    motor_joystick_stop();
+  } else {
+    motor_auto_start();
   }
 }
 

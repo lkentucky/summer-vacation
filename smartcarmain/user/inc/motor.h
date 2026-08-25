@@ -8,8 +8,6 @@
 #define MOTORL_PWM TIM5_PWM_CH3_A2                         //左轮PWM
 #define MOTORR_PWM TIM5_PWM_CH4_A3                         //右轮PWM
 
-// 速度决策总开关：1=启用速度决策，0=禁用并继续使用run_base_speed。
-#define SPEED_DECISION_ENABLE (1)
 // 新板电机直通测试：1=双击K4后两轮固定PWM，0=恢复正常串级方向环和速度PID。
 #define MOTOR_PWM_TEST_ENABLE  (0)
 // 电机直通测试的固定PWM绝对值；正数表示按当前正转方向运行。
@@ -35,6 +33,13 @@ extern float target_speedr;  // 右轮目标速度
 
 extern int base_speed;       // 当前运行速度，0 表示停车
 extern int run_base_speed;   // 菜单可调的启动/巡线速度
+extern int speed_tier_ratio_1;   // 四档速度相对run_base_speed的百分比，菜单可调
+extern int speed_tier_ratio_2;
+extern int speed_tier_ratio_3;
+extern int speed_tier_ratio_4;
+extern int speed_tier_accel_step; // 每图像帧最大升速量，单位cm/s
+extern int speed_tier_decel_step; // 每图像帧最大降速量，单位cm/s
+extern volatile int speed_tier_current; // 当前速度档：0停车/等待，1~4为速度档
 // 蓝牙摇杆遥控：输入范围-100..100，单轮最大速度200cm/s（2m/s）。
 #define JOYSTICK_MAX_SPEED_CM_S (200.0f)
 #define JOYSTICK_TURN_RATIO     (0.25f)
@@ -45,7 +50,12 @@ extern volatile int joystick_turn_percent;
 extern volatile int joystick_forward_percent;
 void motor_joystick_set(int turn_percent, int forward_percent);
 void motor_joystick_stop(void);
+void motor_auto_start(void);       // 从base_speed=0开始，按spd_up逐图像帧加速
+uint8 motor_auto_is_running(void); // 包含尚未产生第一步速度的起步阶段
 extern float vision_yaw_kp;           // 视觉外环P系数，单位(deg/s)/pixel
+extern float vision_yaw_kq;           // 有效P随误差绝对值增加的斜率
+extern float vision_yaw_kp_max;       // 视觉外环最大有效P
+extern float vision_error_deadband;   // 视觉横向误差死区，单位pixel
 extern float vision_yaw_kd;           // 视觉外环D系数，单位deg/pixel
 extern float vision_yaw_kff;          // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel
 extern float yaw_rate_kp;             // 角速度内环P系数，单位(cm/s)/(deg/s)
@@ -53,54 +63,20 @@ extern int yaw_rate_limit_dps;      // 视觉外环最大期望角速度，单�
 extern float yaw_rate_feedback_sign;  // 陀螺仪反馈方向/比例，绝对值决定IMU角速度抑制强度
 extern volatile float yaw_rate_ref_dps;   // 视觉外环当前期望角速度，单位deg/s
 extern volatile float yaw_rate_error_dps; // 角速度内环当前误差，单位deg/s
+extern volatile int steering_image_error_display; // image菜单显示的实际加权巡线误差
+extern volatile float steering_heading_error_deg_display; // 调速使用的有符号航向角误差，单位deg
 
-#if SPEED_DECISION_ENABLE
-// 速度状态机：菜单中spd_state显示0=直道，1=弯道，2=摆动抑制。
-enum
-{
-  SPEED_STATE_STRAIGHT = 0,
-  SPEED_STATE_CORNER = 1,
-  SPEED_STATE_OSCILLATION = 2
-};
-
-
-extern uint8 SPEED_ENTER_LINE_PX; // 进入弯道状态的最小偏差绝对值，单位pixel
-extern uint8 SPEED_EXIT_LINE_PX;  // 退出弯道状态的最大偏差绝对值，单位pixel  
-extern int speed_straight_speed;          // 直道目标速度，单位cm/s
-extern int speed_corner_speed;            // 弯道目标速度，单位cm/s
-extern float speed_straight_yaw_feedback_sign; // 直道角速度反馈方向/比例
-extern float speed_corner_yaw_feedback_sign;   // 弯道角速度反馈方向/比例
-extern float speed_straight_yaw_rate_kp;       // 直道状态角速度内环P系数
-extern float speed_corner_yaw_rate_kp;         // 弯道角速度内环P系数
-extern float speed_straight_vision_kp;         // 直道状态视觉外环P系数
-extern float speed_corner_vision_kp;           // 弯道视觉外环P系数
-extern float speed_corner_vision_kq;           // 弯道视觉误差保方向平方项系数，单位(deg/s)/pixel^2
-extern float speed_oscillation_gyro_threshold; // 摆动检测的最小有效角速度绝对值，单位deg/s
-extern float speed_exit_gyro_threshold;        // 出弯允许的最大角速度绝对值，单位deg/s
-extern int speed_oscillation_reversal_required; // 窗口内触发摆动状态所需的角速度换向次数
-extern int speed_state;                   // 当前状态：0=直道，1=弯道，2=摆动抑制
-extern int speed_decision_speed;          // 经过直道确认和加减速限制后的速度指令，单位cm/s
-extern float speed_accel_step;            // 每个图像帧允许增加的最大速度，单位cm/s
-extern float speed_decel_step;            // 每个图像帧允许减少的最大速度，单位cm/s
-extern int speed_straight_confirm_frames; // 弯道状态下连续多少帧满足直道条件才切回直道
-extern int speed_corner_confirm_frames;   // 直道状态下连续多少帧满足弯道条件才切入弯道
-
-// 使用最新图像误差更新直道/弯道状态及速度指令，每个图像帧调用一次。
-void speed_decision_update(void);
-// 清空状态计数，恢复直道参数，并把速度指令置为起步速度。
-void speed_decision_reset(void);
-#endif
 
 void motor_init(void);
 void motorl_set_pwm(int lpwm);
 void motorr_set_pwm(int rpwm);
 void init_encoder(void);
 void get_motor_speed(void);
-// 每个图像帧更新视觉外环；error_weighted为加权偏差，image_dt_s为真实帧间隔。
+// 每个图像帧更新视觉外环；加权偏差负责主反馈，远点负责预瞄。
 void steering_set_image_error(int16 error_weighted, int16 error_near,
-                              int16 error_far, float image_dt_s);
+                               int16 error_far, float image_dt_s);
 int16 steering_get_image_error(void); // 读取最近一帧加权中线偏差，供无线遥测使用。
-int16 steering_get_heading_error(void); // 读取直道/弯道判断实际使用的远近点差值绝对值。
+int16 steering_get_heading_error(void); // 读取调速使用的航向角误差绝对值，单位deg。
 // 每10ms执行角速度内环，根据期望角速度和IMU角速度更新左右轮目标速度。
 void steering_control_update(void);
 void motor_pid_speedcontrol(void);

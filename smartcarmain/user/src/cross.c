@@ -1,5 +1,6 @@
 #include "cross.h"
 #include "image.h"
+#include "isr.h"
 
 /*
  * 简化十字补线状态机
@@ -27,7 +28,9 @@
 
 #define CROSS_MID_LOST_PERCENT            60  // 中部左右同时丢线比例
 #define CROSS_NEAR_VALID_PERCENT          50  // 入口阶段近处双边线有效比例
-#define CROSS_REPAIR_FRAMES               8   // 每次识别十字后固定补线帧数
+#define CROSS_REPAIR_HOLD_MS            300U  // 每次识别十字后至少维持补线0.3秒
+#define CROSS_REPAIR_HOLD_TICKS \
+    ((CROSS_REPAIR_HOLD_MS + SYS_TICK_MS - 1U) / SYS_TICK_MS)
 
 #define CROSS_FAR_MIN_RUN_ROWS            3   // 远点必须来自至少3行连续边线
 #define CROSS_FAR_MAX_COL_STEP            8   // 连续两行边线允许的最大横向跳
@@ -50,7 +53,7 @@ typedef struct
 
 uint8 cross_state = cross_state_idle;
 
-static uint16 cross_detect_frame_count = 0; // detecting已经持续的图像帧数
+static uint32 cross_repair_start_tick = 0;  // detecting开始时刻，单位2ms系统tick
 static bool cross_entry_armed = true;       // 入口特征消失后才重新允许触发
 static cross_far_point_t cross_left_far = {false, 0, 0};
 static cross_far_point_t cross_right_far = {false, 0, 0};
@@ -306,7 +309,14 @@ static void cross_clear_far_points(void)
 static void cross_change_state(uint8 next_state)
 {
     cross_state = next_state;
-    cross_detect_frame_count = 0;
+    if (next_state == cross_state_detecting)
+    {
+        cross_repair_start_tick = g_sys_tick;
+    }
+    else
+    {
+        cross_repair_start_tick = 0;
+    }
 }
 
 
@@ -321,12 +331,12 @@ void cross_state_reset(void)
 /*
  * 状态路径：
  *
- * idle --入口触发--> detecting --补满7帧--> idle
+ * idle --入口触发--> detecting --补满0.3秒--> idle
  *
- * 入口触发帧计为第1帧，之后再补6帧，总共补7帧。
- * 补满后不判断出口，直接回到idle。
+ * 持续时间使用2ms系统tick计算，不受摄像头实际帧率变化影响。
+ * 补满0.3秒后不判断出口，直接回到idle。
  * 为防止同一个入口特征连续重复触发，必须先看到入口特征消失，
- * 才会重新允许下一次7帧补线。
+ * 才会重新允许下一次补线。
  */
 void cross_state_process(void)
 {
@@ -344,18 +354,13 @@ void cross_state_process(void)
             {
                 cross_entry_armed = false;
                 cross_change_state(cross_state_detecting);
-                cross_detect_frame_count = 1;
                 cross_repair_simple();
             }
             break;
 
         case cross_state_detecting:
             cross_repair_simple();
-            if (cross_detect_frame_count < 65535)
-            {
-                cross_detect_frame_count++;
-            }
-            if (cross_detect_frame_count >= CROSS_REPAIR_FRAMES)
+            if ((g_sys_tick - cross_repair_start_tick) >= CROSS_REPAIR_HOLD_TICKS)
             {
                 cross_change_state(cross_state_idle);
                 cross_clear_far_points();
