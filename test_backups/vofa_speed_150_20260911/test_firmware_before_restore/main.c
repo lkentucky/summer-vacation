@@ -1,0 +1,596 @@
+/*********************************************************************************************************************
+ * MM32F327X-G8P Opensourec Library 即（MM32F327X-G8P 开源库）是一个基于官方 SDK
+ * 接口的第三方开源库 Copyright (c) 2022 SEEKFREE 逐飞科技
+ *
+ * 本文件是 MM32F327X-G8P 开源库的一部分
+ *
+ * MM32F327X-G8P 开源库 是免费软件
+ * 您可以根据自由软件基金会发布的 GPL（GNU General Public License，即
+ * GNU通用公共许可证）的条款 即 GPL 的第3版（即
+ * GPL3.0）或（您选择的）任何后来的版本，重新发布和/或修改它
+ *
+ * 本开源库的发布是希望它能发挥作用，但并未对其作任何的保证
+ * 甚至没有隐含的适销性或适合特定用途的保证
+ * 更多细节请参见 GPL
+ *
+ * 您应该在收到本开源库的同时收到一份 GPL 的副本
+ * 如果没有，请参阅<https://www.gnu.org/licenses/>
+ *
+ * 额外注明：
+ * 本开源库使用 GPL3.0 开源许可证协议 以上许可申明为译文版本
+ * 许可申明英文版在 libraries/doc 文件夹下的 GPL3_permission_statement.txt
+ * 文件中 许可证副本在 libraries 文件夹下 即该文件夹下的 LICENSE 文件
+ * 欢迎各位使用并传播本程序 但修改内容时必须保留逐飞科技的版权声明（即本声明）
+ *
+ * 文件名称          main
+ * 公司名称          成都逐飞科技有限公司
+ * 版本信息          查看 libraries/doc 文件夹内 version 文件 版本说明
+ * 开发环境          IAR 8.32.4 or MDK 5.37
+ * 适用平台          MM32F327X_G8P
+ * 店铺链接          https://seekfree.taobao.com/
+ *
+ * 修改记录
+ * 日期              作者                备注
+ * 2022-08-10        Teternal            first version
+ ********************************************************************************************************************/
+
+#include "zf_common_headfile.h"
+#include "isr.h"
+#include "image.h"
+#include "cross.h"
+#include "IMU.h"
+#include "bluetooth_app.h"
+#include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
+// **************************** 代码区域 ****************************
+#define IPS200_TYPE (IPS200_TYPE_SPI)
+#define IMAGE_PERIOD_MS_DEFAULT   20
+#define IMAGE_PERIOD_MS_MIN       SYS_TICK_MS
+#define IMAGE_PERIOD_MS_MAX       50
+#define IMAGE_DISPLAY_SKIP_FRAMES  5
+#define IMAGE_MENU_ERR_VALUE_X     150       // image菜单中line_err数值的横坐标
+#define IMAGE_MENU_ERR_VALUE_Y     (5 * 16)  // line_err是image菜单第6项
+#define IMAGE_MENU_HEAD_VALUE_X    150       // image菜单中head_err数值的横坐标
+#define IMAGE_MENU_HEAD_VALUE_Y    (6 * 16)  // head_err是image菜单第7项
+#define IMAGE_MENU_CROSS_VALUE_X   150       // 图像菜单中cross数值的横坐标
+#define IMAGE_MENU_CROSS_VALUE_Y   (7 * 16)  // cross是image菜单第8项
+#define IMAGE_MENU_ZEBRA_VALUE_X   150       // 图像菜单中斑马线数据的横坐标
+#define IMAGE_MENU_ZEBRA_COUNT_Y   (8 * 16)  // zebra_n是image菜单第9项
+#define IMAGE_MENU_ZEBRA_JUMP_Y    (9 * 16)  // zebra_wbb是image菜单第10项
+#define IMAGE_MENU_ZEBRA_ROWS_Y   (10 * 16)  // zebra_rows是image菜单第11项
+#define IMAGE_MENU_ZEBRA_STATE_Y  (11 * 16)  // zebra_state是image菜单第12项
+#define ZEBRA_CHECK_ROWS              3       // 参考库：检查图像底部119、118、117三行
+#define ZEBRA_GUARD_OFFSET           30       // 参考库：距底30行处须同时存在左右边界
+#define ZEBRA_PATTERN_REQUIRED        4       // 参考库：任一检测行至少出现4次“白黑黑”
+#define ZEBRA_RELEASE_FRAMES         5       // 通过后连续五帧无候选，才允许检测下一条
+#define ZEBRA_STOP_COUNT             2       // 累计检测到第2条斑马线后停车
+#define ZEBRA_STATE_SEARCH           0       // 状态0：等待斑马线候选
+#define ZEBRA_STATE_CONFIRM          1       // 状态1：确认到斑马线入口
+#define ZEBRA_STATE_PASSING          2       // 状态2：本条已计数，等待完全离开
+#define STEER_CENTER_COL      (MT9V03X_W / 2)
+#define STEER_NEAR_ROW_START  60
+#define STEER_NEAR_ROW_END    65
+#define STEER_FAR_ROW_START   35
+#define STEER_FAR_ROW_END     40
+#define TRACK_LOST_ROW_START       92
+#define TRACK_LOST_ROW_END         115
+#define TRACK_LOST_COUNT_TH        23
+#define TRACK_LOST_CONFIRM_FRAMES  4
+#define TRACK_START_GRACE_FRAMES   12
+#define TRACK_WIDTH_MIN            20
+#define TRACK_WIDTH_MAX            175
+#define TRACK_EDGE_MARGIN          3
+// 十字/环岛入口处近处经常是一大片白色开阔区域，左右边界会同时丢线。
+// 只要原始二值图还能看到足够宽的白色赛道，就不要把“开阔区域”当成冲出赛道。
+#define TRACK_ROAD_WHITE_RUN_MIN       28
+#define TRACK_ROAD_WHITE_COUNT_MIN     45
+#define TRACK_CENTER_WHITE_HALF_WIDTH  8
+#define TRACK_CENTER_WHITE_COUNT_TH    6
+
+
+int image_period_ms = IMAGE_PERIOD_MS_DEFAULT;  // 图像处理最小间隔，单位ms；设小可降低取帧延迟
+int image_frame_ms = 0;                         // 实际两次处理之间的间隔，单位ms
+int image_proc_ms = 0;                          // 一次图像处理从开始到输出误差的耗时，单位ms
+int image_fps = 0;                              // 实际处理帧率，fps
+int image_wait_count = 0;                       // 检查时摄像头还没给新帧的次数，持续增加代表摄像头FPS低于检查节拍
+int zebra_cross_count = 0;                      // 本次运行已经通过的斑马线数量，达到2后停车
+int zebra_transition_count = 0;                 // 底部三行中单行“白黑黑”次数的最大值
+static bool zebra_detect_latched = false;       // 当前斑马线是否已计数，防止同一条斑马线被连续多帧重复累计
+static uint8 zebra_release_frame_count = 0;     // 状态2中斑马线候选连续消失的帧数
+
+int zebra_match_row_count = 0;                  // 底部三行中“白黑黑”次数达到4的行数
+int zebra_state = ZEBRA_STATE_SEARCH;           // 斑马线状态机：0等待、1确认、2通过
+
+static uint32 image_ms_to_ticks(int ms)
+{
+  if (ms < IMAGE_PERIOD_MS_MIN) ms = IMAGE_PERIOD_MS_MIN;
+  if (ms > IMAGE_PERIOD_MS_MAX) ms = IMAGE_PERIOD_MS_MAX;
+  image_period_ms = ms;
+  return (uint32)((ms + SYS_TICK_MS - 1) / SYS_TICK_MS);
+}
+
+static uint32 image_ticks_to_ms(uint32 ticks)
+{
+  return ticks * SYS_TICK_MS;
+}
+
+
+/// 根据指定行范围计算中线误差平均值，返回值为中线误差，单位像素
+static int16 get_mid_error_average(uint8 start_row, uint8 end_row)
+{
+  int32 sum = 0;
+  uint8 count = 0;
+
+  if (start_row >= MT9V03X_H) start_row = MT9V03X_H - 1;
+  if (end_row >= MT9V03X_H) end_row = MT9V03X_H - 1;
+  if (start_row > end_row) {
+    uint8 temp = start_row;
+    start_row = end_row;
+    end_row = temp;
+  }
+
+  for (uint8 i = start_row; i <= end_row; i++) {
+    bool left_valid = (left_line[i] > 2 && left_line[i] < MT9V03X_W - 3);
+    bool right_valid = (right_line[i] > 2 && right_line[i] < MT9V03X_W - 3);
+
+    if (!left_valid && !right_valid) continue;
+    sum += mid_line[i];
+    count++;
+  }
+
+  if (count == 0) return 0;
+  return (int16)(sum / count) - STEER_CENTER_COL;
+}
+
+static bool track_row_has_visible_road(uint8 row)
+{
+  uint8 white_count = 0;
+  uint8 white_run = 0;
+  uint8 max_white_run = 0;
+  uint8 center_white_count = 0;
+  uint8 center_left = STEER_CENTER_COL - TRACK_CENTER_WHITE_HALF_WIDTH;
+  uint8 center_right = STEER_CENTER_COL + TRACK_CENTER_WHITE_HALF_WIDTH;
+
+  for (uint8 j = 2; j < MT9V03X_W - 2; j++) {
+    if (twovalues_image[row][j] == 255) {
+      white_count++;
+      white_run++;
+      if (white_run > max_white_run) {
+        max_white_run = white_run;
+      }
+      if (j >= center_left && j <= center_right) {
+        center_white_count++;
+      }
+    } else {
+      white_run = 0;
+    }
+  }
+
+  return (max_white_run >= TRACK_ROAD_WHITE_RUN_MIN &&
+          (white_count >= TRACK_ROAD_WHITE_COUNT_MIN ||
+           center_white_count >= TRACK_CENTER_WHITE_COUNT_TH));
+}
+
+static bool track_lost_detect(void)
+{
+  uint8 bad_count = 0;
+
+  for (uint8 i = TRACK_LOST_ROW_START; i <= TRACK_LOST_ROW_END; i++) {
+    bool left_lost = (left_line[i] <= 2);
+    bool right_lost = (right_line[i] >= MT9V03X_W - 3);
+    bool both_lost = left_lost && right_lost;
+    bool mid_edge = (mid_line[i] <= TRACK_EDGE_MARGIN || mid_line[i] >= MT9V03X_W - 1 - TRACK_EDGE_MARGIN);
+    bool road_visible = track_row_has_visible_road(i);
+    bool width_bad = false;
+
+    // 十字和环岛会出现“左右同时丢线/宽度过大/中线贴边”，但图像下方仍有大块白色赛道。
+    // 这种情况是特殊赛道开阔区，不是冲出赛道，直接跳过本行。
+    if (road_visible && (both_lost || mid_edge)) {
+      continue;
+    }
+
+    // 单边丢线在弯道/环岛中很常见，不直接算冲出赛道。
+    // 只有左右都有效但宽度极不合理，或者左右同时丢线/中线贴边，才计入坏行。
+    if (!left_lost && !right_lost) {
+      if (right_line[i] > left_line[i]) {
+        uint8 width = right_line[i] - left_line[i];
+        width_bad = (width < TRACK_WIDTH_MIN || width > TRACK_WIDTH_MAX);
+
+        // 宽度过大通常对应十字/环岛开阔区；只要白色赛道仍然可见，就不算坏行。
+        if (road_visible && width > TRACK_WIDTH_MAX) {
+          width_bad = false;
+        }
+      } else {
+        width_bad = true;
+      }
+    }
+
+    if (both_lost || mid_edge || width_bad) {
+      bad_count++;
+    }
+  }
+
+  return (bad_count >= TRACK_LOST_COUNT_TH);
+}
+
+// 参考Track_sweep.c：从左到右统计单行“白、黑、黑”模式。
+static int zebra_count_row_patterns(uint8 row)
+{
+  int pattern_count = 0;
+
+  for (uint16 col = 0; col < MT9V03X_W - 2; col++) {
+    if (twovalues_image[row][col] == 255 &&
+        twovalues_image[row][col + 1] == 0 &&
+        twovalues_image[row][col + 2] == 0) {
+      pattern_count++;
+    }
+  }
+  return pattern_count;
+}
+
+// 参考库使用距底30行的双边有效性作为保护条件，防止出界黑区误识别。
+static bool zebra_guard_boundaries_valid(void)
+{
+  uint8 guard_row = (uint8)(MT9V03X_H - 1 - ZEBRA_GUARD_OFFSET);
+
+  return (left_line[guard_row] > 2 &&
+          right_line[guard_row] < MT9V03X_W - 3 &&
+          left_line[guard_row] < right_line[guard_row]);
+}
+
+// 参考库检查底部三行：任意一行WBB次数达到4，当前帧即为斑马线候选。
+static int zebra_count_matching_rows(void)
+{
+  int matching_rows = 0;
+  int max_pattern_count = 0;
+
+  for (uint8 i = 0; i < ZEBRA_CHECK_ROWS; i++) {
+    uint8 row = (uint8)(MT9V03X_H - 1 - i);
+    int pattern_count = zebra_count_row_patterns(row);
+    if (pattern_count > max_pattern_count) {
+      max_pattern_count = pattern_count;
+    }
+    if (pattern_count >= ZEBRA_PATTERN_REQUIRED) {
+      matching_rows++;
+    }
+  }
+
+  zebra_transition_count = max_pattern_count;
+  return matching_rows;
+}
+
+// 三状态检测：0等待候选、1确认候选、2本条已计数并等待离开。
+// 返回true表示刚确认到第2条斑马线，主循环应立即执行停车保护。
+static bool zebra_state_process(void)
+{
+  bool zebra_candidate;
+
+  zebra_match_row_count = zebra_count_matching_rows();
+  zebra_candidate = (zebra_match_row_count > 0 && zebra_guard_boundaries_valid());
+
+  // 停车时保留跳变次数和匹配行数供观察，但状态机不累计。
+  if (base_speed <= 0) {
+    zebra_detect_latched = false;
+    zebra_state = ZEBRA_STATE_SEARCH;
+    zebra_release_frame_count = 0;
+    return false;
+  }
+
+  // 状态2：本条斑马线已经计数，候选连续消失五帧后才回到等待状态。
+  if (zebra_detect_latched) {
+    zebra_state = ZEBRA_STATE_PASSING;
+    if (zebra_candidate) {
+      zebra_release_frame_count = 0;
+    } else {
+      if (zebra_release_frame_count < ZEBRA_RELEASE_FRAMES) {
+        zebra_release_frame_count++;
+      }
+      if (zebra_release_frame_count >= ZEBRA_RELEASE_FRAMES) {
+        zebra_detect_latched = false;
+        zebra_state = ZEBRA_STATE_SEARCH;
+        zebra_release_frame_count = 0;
+      }
+    }
+    return false;
+  }
+
+  // 状态0：普通赛道或保护条件不满足时继续等待。
+  if (!zebra_candidate) {
+    zebra_state = ZEBRA_STATE_SEARCH;
+    return false;
+  }
+
+  // 参考库在候选首次出现时立即报告入口；随后锁存，避免连续帧重复计数。
+  zebra_state = ZEBRA_STATE_CONFIRM;
+  zebra_detect_latched = true;
+  zebra_state = ZEBRA_STATE_PASSING;
+  zebra_release_frame_count = 0;
+  if (zebra_cross_count < ZEBRA_STOP_COUNT) {
+    zebra_cross_count++;
+  }
+
+  return (zebra_cross_count >= ZEBRA_STOP_COUNT);
+}
+
+
+static void car_stop_protect(void)
+{
+  motor_joystick_stop();
+}
+
+static uint32 camera_processed_count = 0;
+
+static void camera_show_diagnostics(void)
+{
+  static uint32 last_refresh_tick = 0;
+  char text[31];
+  uint32 tick = g_sys_tick;
+
+  // Refresh independently of frame arrival, including when no frame completes.
+  if (!menu_is_image_page() || tick - last_refresh_tick < (500 / SYS_TICK_MS)) {
+    return;
+  }
+  last_refresh_tick = tick;
+  // R is the remaining pixel count on the configured DMA1 channel 4.
+  snprintf(text, sizeof(text), "V%04lu D%04lu P%04lu R%05lu E%02lu",
+           (unsigned long)(camera_vsync_irq_count % 10000),
+           (unsigned long)(camera_dma_complete_count % 10000),
+           (unsigned long)(camera_processed_count % 10000),
+           (unsigned long)(DMA1->CH[3].CNDTR & 0xFFFF),
+           (unsigned long)(camera_dma_error_count % 100));
+  ips200_show_string(0, 304, text);
+}
+
+int main(void) {
+  clock_init(SYSTEM_CLOCK_120M);  // 必须先初始化时钟
+  debug_init();                   // 初始化 Debug UART
+
+  ips200_init(IPS200_TYPE);  // 先初始化屏幕
+#if !MOTOR_SPEED_TEST_ENABLE
+  ips200_show_string(0, 304, "camera init...");
+
+  while (mt9v03x_init()) {  // 初始化摄像头，失败则重试
+    ips200_show_string(0, 304, "camera retry...");
+    system_delay_ms(500);
+  }
+  ips200_show_string(0, 304, "camera ok     ");
+  // 帧率、曝光、增益等参数由 zf_device_mt9v03x.h 的 *_DEF 在初始化时设置。
+  // MT9V03X_* 命令不是传感器寄存器地址，不能传给 mt9v03x_set_reg。
+
+  ips200_show_string(0, 304, "imu init...   ");
+  if (imu_init()) {
+    ips200_show_string(0, 304, "imu fail      ");
+  } else {
+    ips200_show_string(0, 304, "imu ok        ");
+  }
+#endif
+
+  Init_menu();   // 初始化菜单数据
+  key_init(10);  // 初始化按键扫描，10ms周期
+   
+  motor_init();  // 初始化电机控制引脚和PWM输出
+  init_encoder();  // 初始化编码器
+
+#if !MOTOR_SPEED_TEST_ENABLE
+  ips200_show_string(0, 304, "bt init...    ");
+  if (bluetooth_app_init()) {
+    ips200_show_string(0, 304, "bt fail       ");
+  } else if (bluetooth_app_baud == BLUETOOTH_APP_TARGET_BAUD) {
+    ips200_show_string(0, 304, "bt 115200 ok  ");
+  } else {
+    ips200_show_string(0, 304, "bt 9600 ok    ");
+  }
+#else
+  ips200_show_string(0, 304, "BENCH 150cm/s K4x2");
+  motor_speed_test_uart_init();
+#endif
+
+  key_state_reset();   // 复位按键状态（热复位兼容）
+  motor_pid_reset();   // 复位PID积分（热复位兼容）
+  pit_ms_init(TIM6_PIT, 2);   // TIM6: 速度PID每2ms，转向环在中断内分频为10ms。
+
+  Show_menu();  // 首次显示菜单
+
+  enum { STEP_IDLE, STEP_PROCESS, STEP_BOUNDARY,STEP_RING ,STEP_STEER, STEP_DISPLAY };
+
+  while (1) {
+    static uint32 last_key_tick = 0;
+    static uint32 next_image_tick = 0;
+    static uint32 last_image_tick = 0;
+    static uint32 image_process_start_tick = 0;
+    static uint8 step = STEP_IDLE;
+    static uint8 image_display_skip = 0;
+    static uint8 current_threshold = 230;
+    static int last_base_speed = 0;
+    static uint8 track_lost_frame_count = 0;
+    static uint8 track_start_grace_count = 0;
+    static uint32 last_imu_tick = 0;
+    static uint32 last_motor_test_menu_tick = 0; // 电机菜单中编码器数据的最近刷新时刻。
+
+    if (!MOTOR_SPEED_TEST_ENABLE && g_sys_tick - last_imu_tick >= 2) {
+      last_imu_tick = g_sys_tick;
+      imu_update();
+    }
+
+    if (!MOTOR_SPEED_TEST_ENABLE) bluetooth_app_process(); // 测试时禁用蓝牙覆盖目标。
+
+    if (g_sys_tick - last_key_tick >= 2) {
+      last_key_tick = g_sys_tick;
+      if (key_handle())
+        Show_menu();
+    }
+
+#if MOTOR_SPEED_TEST_ENABLE
+    motor_speed_test_process_rx();
+    motor_speed_test_send_vofa();
+    // Bench test deliberately has no image steering, zebra/track stops or
+    // image-dependent speed tiers. K4 and the TIM6 10-second stop remain active.
+    continue;
+#endif
+
+    if (MOTOR_PWM_TEST_ENABLE && menu_is_motor_page() &&
+        g_sys_tick - last_motor_test_menu_tick >= 50) {
+      last_motor_test_menu_tick = g_sys_tick;
+      Show_menu(); // 每100ms刷新一次累计计数和换算速度，避免只在按键时看到旧值。
+    }
+
+    if (base_speed > 0 && last_base_speed <= 0) {
+      track_start_grace_count = TRACK_START_GRACE_FRAMES;
+      track_lost_frame_count = 0;
+      zebra_cross_count = 0;          // 每次重新发车都从第1条斑马线开始计数
+      zebra_transition_count = 0;     // 清除上次停车时保留的跳变显示值
+      zebra_detect_latched = false;   // 清除上次运行留下的斑马线锁存状态
+      zebra_match_row_count = 0;      // 清除上次停车时保留的匹配行数
+      zebra_state = ZEBRA_STATE_SEARCH; // 状态机回到等待斑马线状态
+      zebra_release_frame_count = 0;  // 清除斑马线离开帧计数
+      ips200_show_string(0, 288, "RUNNING          ");
+    } else if (base_speed <= 0 && last_base_speed > 0) {
+      track_start_grace_count = 0;
+      track_lost_frame_count = 0;
+      cross_state_reset();
+    } else if (base_speed <= 0) {
+      track_start_grace_count = 0;
+      track_lost_frame_count = 0;
+    }
+    last_base_speed = base_speed;
+
+    camera_show_diagnostics();
+
+    switch (step) {
+    case STEP_IDLE:
+      // 低延迟取帧：主循环持续检查 finish_flag，有新帧且满足最小处理间隔就立即处理。
+      // image_period_ms 现在表示最小处理间隔；设得小一些可以减少取帧延迟，实际fps仍由摄像头决定。
+      if (mt9v03x_finish_flag &&
+          (last_image_tick == 0 ||
+           (int32)(g_sys_tick - last_image_tick) >= (int32)image_ms_to_ticks(image_period_ms))) {
+        mt9v03x_finish_flag = 0;
+        if (last_image_tick != 0) {
+          image_frame_ms = (int)image_ticks_to_ms(g_sys_tick - last_image_tick);
+          image_fps = (image_frame_ms > 0) ? (1000 / image_frame_ms) : 0;
+        }
+        last_image_tick = g_sys_tick;
+        image_process_start_tick = g_sys_tick;
+        next_image_tick = g_sys_tick + image_ms_to_ticks(image_period_ms);
+        step = STEP_PROCESS;
+      } else if ((int32)(g_sys_tick - next_image_tick) >= 0) {
+        next_image_tick = g_sys_tick + image_ms_to_ticks(image_period_ms);
+        if (!mt9v03x_finish_flag && image_wait_count < 999999) {
+          image_wait_count++;
+        }
+      }
+      break;
+    case STEP_PROCESS:
+      memcpy(base_image, mt9v03x_image, sizeof(base_image));
+      current_threshold = otsu_threshold(base_image);
+      set_image_twovalues(current_threshold);
+      find_base_point();
+      camera_processed_count++;
+      step = STEP_BOUNDARY;
+      break;
+    case STEP_BOUNDARY:
+      find_boundary();
+      // 参考库先完成本帧边界搜索，再用row89双边有效性保护底部三行WBB检测。
+      if (zebra_state_process()) {
+        car_stop_protect();
+        ips200_show_string(0, 288, "ZEBRA STOP      ");
+        step = STEP_IDLE;
+        break;
+      }
+      if (menu_is_image_page()) {
+        ips200_show_int(IMAGE_MENU_ZEBRA_VALUE_X, IMAGE_MENU_ZEBRA_COUNT_Y,
+                        zebra_cross_count, 3);
+        ips200_show_int(IMAGE_MENU_ZEBRA_VALUE_X, IMAGE_MENU_ZEBRA_JUMP_Y,
+                        zebra_transition_count, 3);
+        ips200_show_int(IMAGE_MENU_ZEBRA_VALUE_X, IMAGE_MENU_ZEBRA_ROWS_Y,
+                        zebra_match_row_count, 3);
+        ips200_show_int(IMAGE_MENU_ZEBRA_VALUE_X, IMAGE_MENU_ZEBRA_STATE_Y,
+                        zebra_state, 3);
+      }
+      cross_state_process();  // 普通边线搜索后执行十字检测与补线
+      if (menu_is_image_page()) {
+        // 菜单整体只在按键动作时重画，这里单独实时刷新cross状态，
+        // 否则短暂的exit_confirm状态会被屏幕上的旧数值掩盖。
+        ips200_show_int(IMAGE_MENU_CROSS_VALUE_X, IMAGE_MENU_CROSS_VALUE_Y,
+                        cross_state, 3);
+      }
+      if (MOTOR_PWM_TEST_ENABLE && MOTOR_PWM_TEST_IGNORE_TRACK_LOST) {
+        // 固定PWM台架测试没有赛道图像，跳过丢线停车；双击K4仍可立即停止电机。
+        step = STEP_STEER;
+      } else if (base_speed > 0) {
+        if (track_start_grace_count > 0) {
+          track_start_grace_count--;
+          track_lost_frame_count = 0;
+        } else if (track_lost_detect()) {
+          if (track_lost_frame_count < 255) {
+            track_lost_frame_count++;
+          }
+        } else {
+          track_lost_frame_count = 0;
+        }
+
+        if (track_lost_frame_count >= TRACK_LOST_CONFIRM_FRAMES) {
+          car_stop_protect();
+          track_lost_frame_count = 0;
+          ips200_show_string(0, 288, "TRACK LOST STOP ");
+          step = STEP_IDLE;
+        } else {
+          step = STEP_STEER;
+        }
+      } else {
+        step = STEP_STEER;
+      }
+      break;
+    // case STEP_RING:
+    //   ring_state_process();  // Handle ring detection logic here
+    //   step = STEP_STEER;
+    //   break;
+    case STEP_STEER:
+      // 主反馈是多行中线加权偏差；远点偏差用于生成低通后的预瞄前馈。
+      // 加权偏差不等于单独近点，控制器内使用“远点-加权偏差”而非几何远近点斜率。
+      // 只保留一套方向参数：加权中线负责主反馈，远点负责预瞄。
+      steering_set_image_error((int16)mid_line_weighted_average() - STEER_CENTER_COL,
+                               get_mid_error_average(STEER_NEAR_ROW_START, STEER_NEAR_ROW_END),
+                               get_mid_error_average(STEER_FAR_ROW_START, STEER_FAR_ROW_END),
+                               (float)image_frame_ms * 0.001f);
+      if (menu_is_image_page()) {
+        ips200_show_int(IMAGE_MENU_ERR_VALUE_X, IMAGE_MENU_ERR_VALUE_Y,
+                        steering_get_image_error(), 4);
+        ips200_show_float(IMAGE_MENU_HEAD_VALUE_X, IMAGE_MENU_HEAD_VALUE_Y,
+                          steering_heading_error_deg_display, 3, 1);
+      }
+      image_proc_ms = (int)image_ticks_to_ms(g_sys_tick - image_process_start_tick);
+      if (menu_is_image_page()) {
+        if (++image_display_skip >= IMAGE_DISPLAY_SKIP_FRAMES) {
+          image_display_skip = 0;
+          step = STEP_DISPLAY;
+        } else {
+          step = STEP_IDLE;
+        }
+      } else {
+        image_display_skip = 0;
+        step = STEP_IDLE;
+      }
+      break;
+    case STEP_DISPLAY:
+      // 图像菜单顶部保留参数，图像显示在y=100以下；离开菜单后不会再刷新屏幕图像。
+      ips200_show_gray_image(0, 120, base_image[0], MT9V03X_W, MT9V03X_H,
+                             188, 120, current_threshold);
+      draw_boundary();
+      ips200_show_string(0, 256, "MID " );
+      ips200_show_int(32, 256, (int)mid_line_weighted_average(), 3);
+      ips200_show_string(0, 272, "IMG " );
+      ips200_show_int(32, 272, image_frame_ms, 3);
+      ips200_show_string(58, 272, "ms " );
+      ips200_show_int(82, 272, image_fps, 3);
+      ips200_show_string(108, 272, "fps " );
+      ips200_show_int(142, 272, image_proc_ms, 2);
+      ips200_show_string(160, 272, "ms");
+      ips200_show_string(0, 288, "YAW REF ");
+      ips200_show_int(64, 288, (int)yaw_rate_ref_dps, 4);
+      step = STEP_IDLE;
+      break;
+    }
+  }
+}
+// **************************** 代码区域 ****************************

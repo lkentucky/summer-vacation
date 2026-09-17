@@ -42,5 +42,8 @@
 #define SYS_TICK_SEC  (0.002f)
 
 extern volatile uint32 g_sys_tick;
+extern volatile uint32 camera_vsync_irq_count;
+extern volatile uint32 camera_dma_complete_count;
+extern volatile uint32 camera_dma_error_count;
 
 #endif

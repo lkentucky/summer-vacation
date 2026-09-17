@@ -46,12 +46,14 @@
 // 使用示例     soft_iic_delay(1);
 // 备注信息     内部调用
 //-------------------------------------------------------------------------------------------------------------------
-//static void soft_iic_delay (vuint32 delay)
-//{
-//    volatile uint32 count = delay;
-//    while(count --);
-//}
-#define soft_iic_delay(x)  for(uint32 i = x; i --; )
+static void soft_iic_delay (uint32 delay)
+{
+    // Keep the bus timing loop when ARM Compiler 6 optimizes this file.
+    volatile uint32 count = delay;
+    while(count --)
+    {
+    }
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     软件 IIC START 信号

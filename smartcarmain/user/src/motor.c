@@ -18,8 +18,8 @@
 #define VISION_MIN_DT_S         (0.005f) // 接受的最小图像周期，防止微分被异常小dt放大。
 #define VISION_MAX_DT_S         (0.120f) // 接受的最大图像周期，超过后按默认周期处理。
 #define VISION_STALE_TIMEOUT_MS (120U)  // 图像超过该时间未更新时，期望角速度自动归零。
-float Kp = 9.36f;
-float Ki = 0.5f;
+float Kp = 48.0f;
+float Ki = 4.0f;
 float Kd = 0.01f;
 
 int motor_speedl = 0;
@@ -36,12 +36,12 @@ float target_speedl = 0.0f;  // 左轮目标速度
 float target_speedr = 0.0f;  // 右轮目标速度
 
 int base_speed = 0;     // 当前运行速度，0 表示停车
-int run_base_speed = 315; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
+int run_base_speed = 330; //250// 菜单可调的启动/巡线速度，K4 启动时赋给 base_speed，
 int speed_tier_ratio_1 = 100; // |head_err|<=7deg时相对run_base_speed的百分比。
 int speed_tier_ratio_2 = 92;  // 7<|head_err|<=18deg时的速度百分比。
 int speed_tier_ratio_3 = 82;  // 18<|head_err|<=31deg时的速度百分比。
 int speed_tier_ratio_4 = 74;  // |head_err|>31deg时的速度百分比。
-int speed_tier_accel_step = 20; // 每个图像帧允许的最大升速量，单位cm/s。
+int speed_tier_accel_step = 50; // 每个图像帧允许的最大升速量，单位cm/s。
 int speed_tier_decel_step = 70; // 每个图像帧允许的最大降速量，单位cm/s。
 volatile int speed_tier_current = 0; // 当前速度档：停车/等待为0，运行时为1~4。
 volatile uint8 joystick_control_active = 0;
@@ -52,20 +52,20 @@ static volatile float joystick_target_speedl = 0.0f;
 static volatile float joystick_target_speedr = 0.0f;
 static volatile uint32 joystick_last_packet_tick = 0;
 // 视觉外环变比例P：小误差低增益抑制直道摇摆，大误差自动提高增益增强过弯。
-float vision_yaw_kp = 3.0f;        // 最小有效P，单位(deg/s)/pixel。
-float vision_yaw_kq = 0.14f;       // P随误差绝对值增加的斜率。
-float vision_yaw_kp_max = 7.70f;    // 最大有效P，防止大误差时增益无限增加。
+float vision_yaw_kp = 2.50f;        // 最小有效P，单位(deg/s)/pixel。
+float vision_yaw_kq = 0.07f;       // P随误差绝对值增加的斜率。
+float vision_yaw_kp_max = 5.0f;    // 最大有效P，防止大误差时增益无限增加。
 float vision_error_deadband = 1.0f;// 横向误差死区，单位pixel。
 // 视觉外环D系数：误差变化速度转换为期望角速度的系数，单位deg/pixel。
-float vision_yaw_kd = 0.08f;
+float vision_yaw_kd = 0.07f;
 // 远点相对加权偏差的预瞄前馈系数，单位(deg/s)/pixel。
-float vision_yaw_kff = 0.50f;
+float vision_yaw_kff = 0.58f;
 // 固定使用的一套角速度内环P系数。
-float yaw_rate_kp = 1.53f;//1.53
+float yaw_rate_kp = 1.76f;//1.53
 // 视觉外环允许输出的最大期望角速度绝对值，单位deg/s。
 int yaw_rate_limit_dps = 180;
 // 固定使用的IMU角速度反馈方向/比例。
-float yaw_rate_feedback_sign = -0.5f;
+float yaw_rate_feedback_sign = -0.40f;
 // 视觉外环输出的期望角速度，主循环写入、10ms方向内环读取，单位deg/s。
 volatile float yaw_rate_ref_dps = 0.0f;
 // 角速度内环当前误差，供菜单观察，单位deg/s。
